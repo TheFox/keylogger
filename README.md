@@ -1,6 +1,11 @@
 # Keylogger
 Keylogger for Windows.
 
+## Compiling Requirements
+- OS: Windows Vista Home Premium
+- IDE: [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html)
+- Compiler: [MinGW](http://www.mingw.org/)/[GCC 3.4.2](http://gcc.gnu.org/)
+
 ## License
 Copyright (C) 2013 Christian Mayer (<thefox21at@gmail.com> - <http://fox21.at>)
 
