@@ -7,7 +7,7 @@ Keylogger for Windows.
 - Compiler: [MinGW](http://www.mingw.org/)/[GCC 3.4.2](http://gcc.gnu.org/)
 
 ## License
-Copyright (C) 2013 Christian Mayer <http://fox21.at>
+Copyright (C) 2009 - 2013 Christian Mayer <http://fox21.at>
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

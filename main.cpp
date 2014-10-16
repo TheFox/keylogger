@@ -1,8 +1,8 @@
 
 /*
 	Keylogger/1.0.0
-	Created @ 02.02.2009 by TheFox@fox21.at
-	Copyright (c) 2009 TheFox@fox21.at
+	Created @ 02.02.2009
+	Copyright (C) 2009 Christian Mayer <http://fox21.at>
 	
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
