@@ -14,7 +14,7 @@
 #define FILE_VERSION	""
 #define FILE_DESCRIPTION	"Developed using the Dev-C++ IDE"
 #define INTERNAL_NAME	""
-#define LEGAL_COPYRIGHT	"Copyright (c) 2009 TheFox"
+#define LEGAL_COPYRIGHT	"Copyright (C) 2009 Christian Mayer <http://fox21.at>"
 #define LEGAL_TRADEMARKS	""
 #define ORIGINAL_FILENAME	""
 #define PRODUCT_NAME	""
