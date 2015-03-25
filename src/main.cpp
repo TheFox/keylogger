@@ -19,21 +19,9 @@
 */
 
 
-#define FILEEXT ".log"
-
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <windows.h>
-#include <time.h>
+#include "main.h"
 
 using namespace std;
-
-string intToString(int);
-string getCurrDir();
-string getSelfPath();
-string dirBasename(string);
 
 int main(int argc, char *argv[]){
 	
@@ -220,5 +208,3 @@ string dirBasename(string path){
 	
 	return path;
 }
-
-// EOF
