@@ -2,18 +2,17 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-#include <cstdlib>
+//#include <cstdlib>
 #include <iostream>
-#include <sstream>
+//#include <sstream>
 #include <fstream>
-#include <windows.h>
+#include <string>
+
+#include <stdio.h>
 #include <time.h>
+#include <windows.h>
 
 #include "config.h"
-
-string intToString(int);
-string getCurrDir();
-string getSelfPath();
-string dirBasename(string);
+#include "functions.h"
 
 #endif /* _MAIN_H */

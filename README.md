@@ -1,14 +1,27 @@
 # Keylogger
 Keylogger for Windows.
 
-## Compiling Requirements
+## Compiling
+
+### Requirements
 - OS minimum: Windows Vista Home Premium
-- Compiler: [MinGW](http://www.mingw.org/)/[GCC 3.4.2](http://gcc.gnu.org/)
+- Compiler/IDE:
+	- [MinGW-w64](http://sourceforge.net/projects/mingw-w64/)
+	- or [Orwell Dev-Cpp 5.10](http://sourceforge.net/projects/orwelldevcpp/)
+	- or [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html) ([GCC 3.4.2](http://gcc.gnu.org/))
+
+### Compile with MinGW
+- [Install MinGW-w64](http://sourceforge.net/projects/mingw-w64/).
+- Clone project.
+- In project directory run in cmd: `mingw32-make`. The compiled keylogger is available in `build\keylogger.exe`.
+
+### MinGW Warning
+Under Windows Vista Home Premium I wasn't able to run a version compiled with [MinGW](http://www.mingw.org/). See [DWARF2 issue](http://answers.opencv.org/question/3740/opencv-243-mingw-cannot-run-program/).
 
 ## 	Tested under
-- Windows Vista Home Premium 64 Bit
+- Windows Vista Home Premium, 64 Bit
 - Windows XP Professional
-- Windows 7 64-bit
+- Windows 7, 64-bit
 
 ## License
 Copyright (C) 2009 Christian Mayer <http://fox21.at>

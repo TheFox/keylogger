@@ -8,5 +8,6 @@
 #define PROJECT_VERSION_PATCH 0
 #define PROJECT_COPYRIGHT "Copyright (C) 2009 Christian Mayer <http://fox21.at>"
 #define FILEEXT ".log"
+#define DEBUG
 
 #endif /* _CONFIG_H */

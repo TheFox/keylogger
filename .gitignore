@@ -4,3 +4,5 @@
 *.o
 *.res
 *.win
+*.sublime-workspace
+build

