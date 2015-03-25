@@ -1,0 +1,6 @@
+*.exe
+*.layout
+*.log
+*.o
+*.res
+*.win

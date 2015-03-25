@@ -38,7 +38,7 @@
 #include <sstream>
 #include <fstream>
 #include <windows.h>
-
+#include <time.h>
 
 using namespace std;
 
