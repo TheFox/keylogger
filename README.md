@@ -2,8 +2,7 @@
 Keylogger for Windows.
 
 ## Compiling Requirements
-- OS: Windows Vista Home Premium
-- IDE: [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html)
+- OS minimum: Windows Vista Home Premium
 - Compiler: [MinGW](http://www.mingw.org/)/[GCC 3.4.2](http://gcc.gnu.org/)
 
 ## 	Tested under
