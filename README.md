@@ -6,6 +6,11 @@ Keylogger for Windows.
 - IDE: [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html)
 - Compiler: [MinGW](http://www.mingw.org/)/[GCC 3.4.2](http://gcc.gnu.org/)
 
+## 	Tested under
+- Windows Vista Home Premium 64 Bit
+- Windows XP Professional
+- Windows 7 64-bit
+
 ## License
 Copyright (C) 2009 Christian Mayer <http://fox21.at>
 

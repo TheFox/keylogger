@@ -18,18 +18,6 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/*
-	Description:
-		Win32 Keylogger
-*/
-
-/*
-	Developed under Windows Vista Home Premium 64 Bit
-	Tested under
-		- Windows Vista Home Premium 64 Bit
-		- Windows XP Professional
-*/
-
 
 #define FILEEXT ".log"
 
