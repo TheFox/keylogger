@@ -43,6 +43,8 @@ int main(int argc, char *argv[]){
 	
 	ofstream klogout;
 	printf("type ofstream: %p\n", &klogout);
+	HWND hwnd;
+	printf("type hwnd:     %p\n", &hwnd);
 	puts("");
 	
 	string i1 = intToString(21);
