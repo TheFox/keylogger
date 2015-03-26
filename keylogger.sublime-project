@@ -6,5 +6,19 @@
 			"folder_exclude_patterns": [ ],
 			"file_exclude_patterns": [ ]
 		}
+	],
+	"build_systems":[
+		{
+			"name": "Build",
+			"cmd": ["mingw32-make"],
+			"working_dir": "${project_path:${folder}}",
+			"shell": true
+		},
+		{
+			"name": "Clean",
+			"cmd": ["mingw32-make clean"],
+			"working_dir": "${project_path:${folder}}",
+			"shell": true
+		}
 	]
 }
