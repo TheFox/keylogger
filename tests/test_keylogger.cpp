@@ -41,10 +41,12 @@ int main(int argc, char *argv[]){
 	printf("function dirBasename: %p\n", dirBasename);
 	puts("");
 	
-	ofstream klogout;
-	printf("type ofstream: %p\n", &klogout);
-	HWND hwnd;
-	printf("type hwnd:     %p\n", &hwnd);
+	ofstream ofstream1;
+	printf("type ofstream: %p\n", &ofstream1);
+	HWND hwnd1;
+	printf("type hwnd:     %p\n", &hwnd1);
+	SHORT short1;
+	printf("type short:    %p\n", &short1);
 	puts("");
 	
 	string i1 = intToString(21);
