@@ -20,10 +20,11 @@ int main(int argc, char *argv[]){
 #endif
 	puts("");
 	
-	printf("function itoa:     %p\n", itoa);
-	printf("function time:     %p\n", time);
-	printf("function strftime: %p\n", strftime);
-	printf("function sprintf:  %p\n", sprintf);
+	printf("function itoa:       %p\n", itoa);
+	printf("function time:       %p\n", time);
+	printf("function localtime:  %p\n", localtime);
+	printf("function strftime:   %p\n", strftime);
+	printf("function sprintf:    %p\n", sprintf);
 	puts("");
 	
 	printf("function GetCurrentDirectory: %p\n", GetCurrentDirectory);
