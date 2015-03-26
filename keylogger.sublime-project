@@ -15,6 +15,12 @@
 			"shell": true
 		},
 		{
+			"name": "Build Test",
+			"cmd": ["mingw32-make build/test_keylogger.exe"],
+			"working_dir": "${project_path:${folder}}",
+			"shell": true
+		},
+		{
 			"name": "Clean",
 			"cmd": ["mingw32-make clean"],
 			"working_dir": "${project_path:${folder}}",
