@@ -1,9 +1,11 @@
 # Keylogger
+
 Keylogger for Windows.
 
 ## Compiling
 
 ### Requirements
+
 - OS minimum: Windows Vista Home Premium
 - Compiler/IDE:
 	- [MinGW-w64](http://sourceforge.net/projects/mingw-w64/)
@@ -11,11 +13,13 @@ Keylogger for Windows.
 	- or [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html) ([GCC 3.4.2](http://gcc.gnu.org/))
 
 ### Compile with MinGW
+
 - [Install MinGW-w64](http://sourceforge.net/projects/mingw-w64/).
 - Clone project.
 - In project directory run in cmd: `mingw32-make`. The compiled keylogger is available in `build\keylogger.exe`.
 
 ### MinGW Warning
+
 Under Windows Vista Home Premium I wasn't able to run a version compiled with [MinGW](http://www.mingw.org/). See [DWARF2 issue](http://answers.opencv.org/question/3740/opencv-243-mingw-cannot-run-program/).
 
 ## 	Tested under
@@ -23,8 +27,17 @@ Under Windows Vista Home Premium I wasn't able to run a version compiled with [M
 - Windows XP Professional
 - Windows 7, 64-bit
 
+## Install
+
+Just start `keylogger.exe` from any directory. There is no such thing like an install or auto-start routine. This Keylogger acts according to the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy): do one thing and do it well.
+
+## Uninstall
+
+Open the Task Manager, search for `keylogger.exe` and kill this process. Then delete `keylogger.exe`. That's it.
+
 ## License
-Copyright (C) 2009 Christian Mayer <http://fox21.at>
+
+Copyright (C) 2009 Christian Mayer <https://fox21.at>
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
