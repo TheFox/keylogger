@@ -2,6 +2,13 @@
 
 Keylogger for Windows.
 
+## Project Outlines
+
+The project outlines as described in my blog post about [Open Source Software Collaboration](https://blog.fox21.at/2019/02/21/open-source-software-collaboration.html).
+
+- The one and only purpose of this software is to log keystrokes under Windows operating system.
+- Since this keylogger already has all its features please do not request new features. It's designed by the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy): *Write programs that do one thing and do it well.*
+
 ## Compiling
 
 ### Requirements
@@ -27,7 +34,7 @@ Under Windows Vista Home Premium I wasn't able to run a version compiled with [M
 - Windows XP Professional
 - Windows 7, 64-bit
 
-## Install
+## Installation
 
 Just start `keylogger.exe` from any directory. There is no such thing like an install or auto-start routine. This Keylogger acts according to the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy): do one thing and do it well.
 
