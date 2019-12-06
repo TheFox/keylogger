@@ -13,34 +13,43 @@ The project outlines as described in my blog post about [Open Source Software Co
 
 ### Requirements
 
-- OS minimum: Windows Vista Home Premium
-- Compiler/IDE:
-	- [MinGW-w64](http://sourceforge.net/projects/mingw-w64/)
-	- or [Orwell Dev-Cpp 5.10](http://sourceforge.net/projects/orwelldevcpp/)
-	- or [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html) ([GCC 3.4.2](http://gcc.gnu.org/))
+1. OS minimum: Windows Vista Home Premium
+2. Compiler/IDE:
+	1. [MinGW-w64](http://sourceforge.net/projects/mingw-w64/)
+	2. [Orwell Dev-Cpp 5.10](http://sourceforge.net/projects/orwelldevcpp/)
+	3. [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html) ([GCC 3.4.2](http://gcc.gnu.org/))
 
-### Compile with MinGW
+### MinGW
 
-- [Install MinGW-w64](http://sourceforge.net/projects/mingw-w64/).
-- Clone project.
-- In project directory run in cmd: `mingw32-make`. The compiled keylogger is available in `build\keylogger.exe`.
+1. [Install MinGW-w64](http://sourceforge.net/projects/mingw-w64/).
+2. Clone project.
+3. In project directory run in cmd: `mingw32-make`. The compiled keylogger is available in `build\keylogger.exe`.
 
-### MinGW Warning
+Windows Vista Home Premium with MinGW is not supported. See [DWARF2 issue](http://answers.opencv.org/question/3740/opencv-243-mingw-cannot-run-program/).
 
-Under Windows Vista Home Premium I wasn't able to run a version compiled with [MinGW](http://www.mingw.org/). See [DWARF2 issue](http://answers.opencv.org/question/3740/opencv-243-mingw-cannot-run-program/).
+## Tested
 
-## 	Tested under
-- Windows Vista Home Premium, 64 Bit
-- Windows XP Professional
-- Windows 7, 64-bit
+| Major Version | Edition       | Version | Build      | Arch   |
+|:------------- |:------------- |:------- |:---------- |:------ |
+| Windows Vista | Home Premium  |         |            | 64 bit |
+| Windows XP    | Pro           |         |            |        |
+| Windows 7     |               |         |            | 64 bit |
+| Windows 10    | Home          | 1903    | 18362.476  | 64 bit |
 
-## Installation
+## Running
+
+### Starting
 
 Just start `keylogger.exe` from any directory. There is no such thing like an install or auto-start routine. This Keylogger acts according to the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy): do one thing and do it well.
 
-## Uninstall
+### Stopping
 
-Open the Task Manager, search for `keylogger.exe` and kill this process. Then delete `keylogger.exe`. That's it.
+1. Open Task Manager
+2. Go to "Details" tab
+3. Highlight any process
+4. Press "k" on keyboard
+5. Highlight "keylogger.exe"
+6. Press <del> on keyboard (to kill it)
 
 ## License
 
