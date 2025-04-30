@@ -1,11 +1,5 @@
-*.exe
-*.layout
+*.cpp
 *.log
-*.o
-*.res
-*.win
-*.sublime-workspace
-build
 /zig-out/
 /.zig-cache/
 /tmp/

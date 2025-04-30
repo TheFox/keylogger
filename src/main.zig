@@ -12,9 +12,7 @@ const cTime = @cImport(@cInclude("time.h"));
 const cWindows = @cImport({
     @cInclude("windows.h");
     @cInclude("winuser.h");
-    // @cInclude("time.h");
 });
-// const z = std.mem.zeroes;
 const parseInt = std.fmt.parseInt;
 
 pub fn main() !void {
