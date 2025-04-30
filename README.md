@@ -13,26 +13,27 @@ The project outlines as described in my blog post about [Open Source Software Co
 
 ### Requirements
 
-- OS minimum: Windows Vista Home Premium
-- Compiler/IDE:
-	- [MinGW-w64](http://sourceforge.net/projects/mingw-w64/)
-	- or [Orwell Dev-Cpp 5.10](http://sourceforge.net/projects/orwelldevcpp/)
-	- or [Dev-C++ 4.9.9.2](http://www.bloodshed.net/dev/devcpp.html) ([GCC 3.4.2](http://gcc.gnu.org/))
+- OS: Windows 11
+- Visual Studio Community 2022
+	- MSVC v143 x64/x86 build tools
+	- Windows 11 SDK (10.0.22621.0)
 
-### Compile with MinGW
+### Build
 
-- [Install MinGW-w64](http://sourceforge.net/projects/mingw-w64/).
-- Clone project.
-- In project directory run in cmd: `mingw32-make`. The compiled keylogger is available in `build\keylogger.exe`.
+```sh
+zig build --release
+```
 
-### MinGW Warning
+### Build for x86 (i386/i686)
 
-Under Windows Vista Home Premium I wasn't able to run a version compiled with [MinGW](http://www.mingw.org/). See [DWARF2 issue](http://answers.opencv.org/question/3740/opencv-243-mingw-cannot-run-program/).
+```sh
+zig build --release -Dtarget=x86-windows -Dcpu=i386
+zig build --release -Dtarget=x86-windows -Dcpu=i686
+```
 
-## 	Tested under
-- Windows Vista Home Premium, 64 Bit
-- Windows XP Professional
-- Windows 7, 64-bit
+## Tested under
+
+- Windows 11
 
 ## Installation
 

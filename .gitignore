@@ -6,3 +6,6 @@
 *.win
 *.sublime-workspace
 build
+/zig-out/
+/.zig-cache/
+/tmp/
