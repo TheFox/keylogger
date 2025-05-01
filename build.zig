@@ -34,7 +34,6 @@ pub fn build(b: *std.Build) void {
             },
         ) catch @panic("failed to allocate target name");
     }
-
     print("target name: {s}\n", .{target_name});
 
     const exe_mod = b.createModule(.{
@@ -48,6 +47,9 @@ pub fn build(b: *std.Build) void {
         .name = target_name,
         .root_module = exe_mod,
     });
+
+    // If you don't need a Terminal Window on start via doubleclick.
+    //exe.subsystem = .Windows;
 
     b.installArtifact(exe);
 

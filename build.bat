@@ -1,5 +1,7 @@
 @echo off
 
+REM Builds all platforms.
+
 zig build --verbose --summary all --release
 zig build --verbose --summary all --release -Dtarget=x86_64-windows
 zig build --verbose --summary all --release -Dtarget=x86-windows -Dcpu=i386
