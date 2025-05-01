@@ -9,14 +9,18 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
     });
+    const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
 
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
     print("target cpu: {s}\n", .{target.result.cpu.model.name});
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
     print("optimize: {s}\n", .{@tagName(optimize)});
+    print("CI: {any}\n", .{is_ci});
 
     var target_name: []u8 = undefined;
-    if (eql(u8, target.result.cpu.model.name, "x86_64")) {
+    if (is_ci) {
+        target_name = allocPrint(b.allocator, "keylogger", .{}) catch @panic("failed to allocate target name");
+    } else if (eql(u8, target.result.cpu.model.name, "x86_64")) {
         target_name = allocPrint(
             b.allocator,
             "keylogger-{s}",
