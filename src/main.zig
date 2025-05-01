@@ -1,3 +1,4 @@
+const VERSION = "2.0.0";
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
@@ -155,7 +156,7 @@ pub fn main() !void {
 
 fn printHeader() !void {
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Keylogger 2.0.0-dev.1\n", .{});
+    try stdout.print("Keylogger " ++ VERSION ++ "\n", .{});
     try stdout.print("Copyright (C) 2009, 2025 Christian Mayer <https://fox21.at>\n\n", .{});
 }
 

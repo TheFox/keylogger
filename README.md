@@ -9,6 +9,10 @@ The project outlines as described in my blog post about [Open Source Software Co
 - The one and only purpose of this software is to log keystrokes under Windows operating system.
 - Since this keylogger already has all its features please do not request new features. It's designed by the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy): *Write programs that do one thing and do it well.*
 
+## Download
+
+Download the latest pre-build exe files from the [Releases](https://github.com/TheFox/keylogger/releases) section.
+
 ## Compiling
 
 ### Requirements
