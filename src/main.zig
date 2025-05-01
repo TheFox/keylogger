@@ -232,8 +232,3 @@ fn getKeyName(kn: []u8, ki: u8) []u8 {
     }) catch @panic("bufPrint failed");
     return x;
 }
-
-test "windows functions" {
-    print("test\n", .{});
-    // print("GetForegroundWindow: {p}\n", .{cWindows.GetForegroundWindow});
-}
