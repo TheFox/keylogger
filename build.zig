@@ -10,12 +10,14 @@ pub fn build(b: *std.Build) void {
         .preferred_optimize_mode = .ReleaseSmall,
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
+    const is_winsubsys = b.option(bool, "winsubsys", "Enable Windows Subsystem") orelse false;
 
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
     print("target cpu: {s}\n", .{target.result.cpu.model.name});
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
     print("optimize: {s}\n", .{@tagName(optimize)});
     print("CI: {any}\n", .{is_ci});
+    print("windows subsys: {any}\n", .{is_winsubsys});
 
     var target_name: []u8 = undefined;
     if (is_ci) {
@@ -53,7 +55,14 @@ pub fn build(b: *std.Build) void {
     });
 
     // If you don't need a Terminal Window on start via doubleclick.
-    //exe.subsystem = .Windows;
+    if (is_winsubsys) {
+        exe.subsystem = .Windows;
+    }
+
+    const options = b.addOptions();
+    options.addOption(bool, "ci", is_ci);
+    options.addOption(bool, "winsubsys", is_winsubsys);
+    exe.root_module.addOptions("config", options);
 
     b.installArtifact(exe);
 
