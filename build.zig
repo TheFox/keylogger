@@ -59,11 +59,6 @@ pub fn build(b: *std.Build) void {
         exe.subsystem = .Windows;
     }
 
-    const options = b.addOptions();
-    options.addOption(bool, "ci", is_ci);
-    options.addOption(bool, "winsubsys", is_winsubsys);
-    exe.root_module.addOptions("config", options);
-
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
