@@ -5,6 +5,12 @@ const allocPrint = std.fmt.allocPrint;
 const eql = std.mem.eql;
 
 pub fn build(b: *std.Build) void {
+    const version: std.SemanticVersion = .{
+        .major = 2,
+        .minor = 0,
+        .patch = 0,
+        .pre = "dev.1",
+    };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
@@ -51,6 +57,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = target_name,
+        .version = version,
         .root_module = exe_mod,
     });
 
