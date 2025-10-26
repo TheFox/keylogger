@@ -12,6 +12,7 @@ jobs:
         zig-version:
           - '0.15.0'
           - '0.15.1'
+          - '0.15.2'
 
     steps:
       - name: Checkout repository
@@ -25,7 +26,7 @@ jobs:
         run: zig version
 
       - name: Build
-        run: zig build --verbose --summary all --release -Dci=true
+        run: zig build --release -Dci=true
 
       - name: Check help
         run: ./zig-out/bin/keylogger.exe --help

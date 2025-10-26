@@ -2,7 +2,7 @@
 
 ## v2.1.0 (unreleased)
 
-- Use Zig 0.15.1.
+- Use Zig 0.15.2.
 
 ## v2.0.0
 
