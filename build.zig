@@ -7,8 +7,9 @@ const eql = std.mem.eql;
 pub fn build(b: *std.Build) void {
     const version: std.SemanticVersion = .{
         .major = 2,
-        .minor = 1,
+        .minor = 2,
         .patch = 0,
+        .pre = "-dev",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
