@@ -164,7 +164,7 @@ pub fn main(init: std.process.Init) !void {
 
 fn printHeader(stdout: *Writer) !void {
     try stdout.print("Keylogger " ++ VERSION ++ "\n", .{});
-    try stdout.print("Copyright (C) 2009, 2025 Christian Mayer <https://fox21.at>\n\n", .{});
+    try stdout.print("Copyright (C) 2009 Christian Mayer <https://fox21.at>\n\n", .{});
     try stdout.flush();
 }
 
