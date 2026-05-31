@@ -25,14 +25,14 @@ Download the latest pre-build exe files from the [Releases](https://github.com/T
 ### Build
 
 ```sh
-zig build --release
+zig build install --release
 ```
 
 ### Build for x86 (i386/i686)
 
 ```sh
-zig build --release -Dtarget=x86-windows -Dcpu=i386
-zig build --release -Dtarget=x86-windows -Dcpu=i686
+zig build install --release -Dtarget=x86-windows -Dcpu=i386
+zig build install --release -Dtarget=x86-windows -Dcpu=i686
 ```
 
 ## Tested under

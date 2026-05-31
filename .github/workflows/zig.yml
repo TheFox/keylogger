@@ -24,7 +24,7 @@ jobs:
         run: zig version
 
       - name: Build
-        run: zig build --release -Dci=true
+        run: zig build install --release -Dci=true
 
       - name: Check help
         run: ./zig-out/bin/keylogger.exe --help
