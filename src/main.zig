@@ -12,9 +12,7 @@ const eql = std.mem.eql;
 const print = std.debug.print;
 const f = std.fmt.bufPrint;
 const cTime = @cImport(@cInclude("time.h"));
-const cWindows = @cImport({
-    @cInclude("windows.h");
-});
+const cWindows = @cImport(@cInclude("windows.h"));
 const parseInt = std.fmt.parseInt;
 
 const PrevType = enum {
@@ -124,10 +122,7 @@ pub fn main(init: std.process.Init) !void {
 
     var prev_type: PrevType = .init;
     while (true) {
-        const d: Duration = .fromMilliseconds(arg_sleep);
-        const c: Clock = .real;
-        try io.sleep(d, c);
-        //try io.sleep(.fromMilliseconds(arg_sleep), .real);
+        try io.sleep(.fromMilliseconds(arg_sleep), .real);
 
         const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
         const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
@@ -192,7 +187,7 @@ fn printHelp(stdout: *Writer) !void {
 }
 
 fn fileExists(allocator: Allocator, path: []const u8) bool {
-    const c_str = allocator.dupeZ(u8, path) catch unreachable;
+    const c_str = allocator.dupeZ(u8, path) catch @panic("Cannot alloc dupeZ");
     defer allocator.free(c_str); // Not really needed in the context of this program.
     const attrs = cWindows.GetFileAttributesA(c_str);
     return attrs != cWindows.INVALID_FILE_ATTRIBUTES;
