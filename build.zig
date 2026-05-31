@@ -1,5 +1,4 @@
 const std = @import("std");
-const LazyPath = std.Build.LazyPath;
 const print = std.debug.print;
 const allocPrint = std.fmt.allocPrint;
 const eql = std.mem.eql;
