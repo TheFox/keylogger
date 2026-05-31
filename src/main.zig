@@ -131,8 +131,10 @@ pub fn main(init: std.process.Init) !void {
     const key_len: usize = 255;
     const key_name_b = try allocator.alloc(u8, key_len);
 
-    for (0..title_len) |n| ctitle_b[n] = 0;
-    for (0..title_len) |n| ptitle_b[n] = 0;
+    for (0..title_len) |n| {
+        ctitle_b[n] = 0;
+        ptitle_b[n] = 0;
+    }
     for (0..key_len) |n| key_name_b[n] = 0;
 
     var prev_type: PrevType = .init;
