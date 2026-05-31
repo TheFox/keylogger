@@ -2,6 +2,7 @@
 
 ## v2.3.0
 
+- Native Windows Lib
 - Log file handling; DateTime formatting.
 
 ## v2.2.0
