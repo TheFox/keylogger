@@ -73,9 +73,10 @@ pub fn main(init: std.process.Init) !void {
             const now = clock.now(io).toSeconds();
             const localtime = cTime.localtime(&now);
 
-            var output_path_b: [1024]u8 = undefined;
-            const output_path_l = cTime.strftime(&output_path_b, 255, "keylogger_%Y%m%d_%H%M%S.log", localtime);
-            const output_path_s: []u8 = output_path_b[0..output_path_l];
+            var output_path_b = try allocator.alloc(u8, 256);
+            defer allocator.free(output_path_b);
+            const output_path_l = cTime.strftime(output_path_b.ptr, 256, "keylogger_%Y%m%d_%H%M%S.log", localtime);
+            const output_path_s = output_path_b[0..output_path_l];
             try arg_output_path.appendSlice(allocator, output_path_s);
         } else {
             try arg_output_path.appendSlice(allocator, "keylogger.log");
