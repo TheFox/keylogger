@@ -5,11 +5,10 @@ const allocPrint = std.fmt.allocPrint;
 const eql = std.mem.eql;
 
 pub fn build(b: *std.Build) void {
-    const version: std.SemanticVersion = .{
+    const version: std.SemanticVersion = .{ // VERSION
         .major = 2,
         .minor = 2,
         .patch = 0,
-        .pre = "-dev",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
