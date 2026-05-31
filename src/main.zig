@@ -1,4 +1,4 @@
-const VERSION = "2.2.0";
+const VERSION = "2.3.0-dev";
 const std = @import("std");
 const Clock = std.Io.Clock;
 const Duration = std.Io.Duration;
@@ -12,8 +12,17 @@ const eql = std.mem.eql;
 const print = std.debug.print;
 const f = std.fmt.bufPrint;
 const cTime = @cImport(@cInclude("time.h"));
-const cWindows = @cImport(@cInclude("windows.h"));
 const parseInt = std.fmt.parseInt;
+
+const win = std.os.windows;
+const HWND = win.HWND;
+const SHORT = win.SHORT;
+const INVALID_FILE_ATTRIBUTES = win.INVALID_FILE_ATTRIBUTES;
+
+extern "user32" fn GetForegroundWindow() callconv(.winapi) ?HWND;
+extern "user32" fn GetAsyncKeyState(vKey: i32) callconv(.winapi) i16;
+extern "user32" fn GetWindowTextA(hwnd: HWND, lpString: [*]u8, nMaxCount: i32) callconv(.winapi) i32;
+extern "kernel32" fn GetFileAttributesA(lpFileName: [*:0]const u8) callconv(.winapi) u32;
 
 const PrevType = enum {
     init,
@@ -124,8 +133,8 @@ pub fn main(init: std.process.Init) !void {
     while (true) {
         try io.sleep(.fromMilliseconds(arg_sleep), .real);
 
-        const hwnd: cWindows.HWND = cWindows.GetForegroundWindow();
-        const ctitle_len = cWindows.GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
+        const hwnd: HWND = GetForegroundWindow() orelse continue;
+        const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
         const ctitle_len_u: usize = @intCast(ctitle_len);
         const ctitle_s: []u8 = ctitle_b[0..ctitle_len_u];
 
@@ -151,7 +160,7 @@ pub fn main(init: std.process.Init) !void {
 
         var key_i: u8 = 1;
         while (key_i < 255) : (key_i += 1) {
-            const key_state: cWindows.SHORT = cWindows.GetAsyncKeyState(key_i);
+            const key_state: SHORT = GetAsyncKeyState(key_i);
             if (key_state & 1 != 0) {
                 const key_name_s = getKeyName(key_name_b, key_i);
                 if (arg_verbose >= 1) {
@@ -189,8 +198,8 @@ fn printHelp(stdout: *Writer) !void {
 fn fileExists(allocator: Allocator, path: []const u8) bool {
     const c_str = allocator.dupeZ(u8, path) catch @panic("Cannot alloc dupeZ");
     defer allocator.free(c_str); // Not really needed in the context of this program.
-    const attrs = cWindows.GetFileAttributesA(c_str);
-    return attrs != cWindows.INVALID_FILE_ATTRIBUTES;
+    const attrs = GetFileAttributesA(c_str);
+    return attrs != INVALID_FILE_ATTRIBUTES;
 }
 
 fn getKeyName(kn: []u8, ki: u8) []u8 {

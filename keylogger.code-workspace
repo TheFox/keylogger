@@ -2,5 +2,19 @@
 	"folders": [
 		{ "path": "." }
 	],
-	"settings": {}
+	"settings": {},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Build All",
+				"command": ".\\build.bat",
+				"type": "shell",
+				"presentation": {
+					"reveal": "always"
+				},
+				"group": "build"
+			}
+		]
+	}
 }
