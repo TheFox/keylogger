@@ -1,5 +1,9 @@
 # Release Notes for Keylogger v2.x
 
+## v2.3.0
+
+- Log file handling; DateTime formatting.
+
 ## v2.2.0
 
 - Use Zig 0.16.0.
