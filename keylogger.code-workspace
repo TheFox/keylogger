@@ -7,6 +7,14 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
+				"label": "Simple Build",
+				"command": "zig build install --release",
+				"type": "shell",
+				"presentation": {
+					"reveal": "always"
+				},
+				"group": "build"
+			}, {
 				"label": "Build All",
 				"command": ".\\build.bat",
 				"type": "shell",
