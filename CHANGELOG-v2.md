@@ -1,5 +1,9 @@
 # Release Notes for Keylogger v2.x
 
+## v2.4.0 [unreleased]
+
+- Hide console window by default.
+
 ## v2.3.0
 
 - Native Windows Lib

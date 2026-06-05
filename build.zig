@@ -6,22 +6,21 @@ const eql = std.mem.eql;
 pub fn build(b: *std.Build) void {
     const version: std.SemanticVersion = .{ // VERSION
         .major = 2,
-        .minor = 3,
+        .minor = 4,
         .patch = 0,
+        .pre = "dev.1",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
-    const is_winsubsys = b.option(bool, "winsubsys", "Enable Windows Subsystem") orelse false;
 
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
     print("target cpu: {s}\n", .{target.result.cpu.model.name});
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
     print("optimize: {s}\n", .{@tagName(optimize)});
     print("CI: {any}\n", .{is_ci});
-    print("windows subsys: {any}\n", .{is_winsubsys});
 
     var target_name: []u8 = undefined;
     if (is_ci) {
@@ -59,12 +58,7 @@ pub fn build(b: *std.Build) void {
         .version = version,
         .root_module = exe_mod,
     });
-
-    // If you don't need a Terminal Window on start via doubleclick.
-    if (is_winsubsys) {
-        exe.subsystem = .Windows;
-    }
-
+    exe.subsystem = .windows;
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

@@ -1,6 +1,6 @@
 .{
     .name = .keylogger,
-    .version = "2.3.0", // VERSION
+    .version = "2.4.0-dev.1", // VERSION
     .fingerprint = 0xf07882a0b57d2d54,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{},
