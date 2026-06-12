@@ -3,7 +3,7 @@ const print = std.debug.print;
 const allocPrint = std.fmt.allocPrint;
 const eql = std.mem.eql;
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const version: std.SemanticVersion = .{ // VERSION
         .major = 2,
         .minor = 4,
@@ -16,34 +16,21 @@ pub fn build(b: *std.Build) void {
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
 
+    var target_name: []u8 = undefined;
+    if (is_ci) {
+        target_name = try allocPrint(b.allocator, "keylogger", .{});
+    } else if (eql(u8, target.result.cpu.model.name, "x86_64")) {
+        target_name = try allocPrint(b.allocator, "keylogger-{s}", .{@tagName(target.result.cpu.arch)});
+    } else {
+        target_name = try allocPrint(b.allocator, "keylogger-{s}-{s}", .{ @tagName(target.result.cpu.arch), target.result.cpu.model.name });
+    }
+
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
     print("target cpu: {s}\n", .{target.result.cpu.model.name});
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
+    print("target name: {s}\n", .{target_name});
     print("optimize: {s}\n", .{@tagName(optimize)});
     print("CI: {any}\n", .{is_ci});
-
-    var target_name: []u8 = undefined;
-    if (is_ci) {
-        target_name = allocPrint(b.allocator, "keylogger", .{}) catch @panic("failed to allocate target name");
-    } else if (eql(u8, target.result.cpu.model.name, "x86_64")) {
-        target_name = allocPrint(
-            b.allocator,
-            "keylogger-{s}",
-            .{
-                @tagName(target.result.cpu.arch),
-            },
-        ) catch @panic("failed to allocate target name");
-    } else {
-        target_name = allocPrint(
-            b.allocator,
-            "keylogger-{s}-{s}",
-            .{
-                @tagName(target.result.cpu.arch),
-                target.result.cpu.model.name,
-            },
-        ) catch @panic("failed to allocate target name");
-    }
-    print("target name: {s}\n", .{target_name});
 
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
@@ -58,7 +45,9 @@ pub fn build(b: *std.Build) void {
         .version = version,
         .root_module = exe_mod,
     });
-    exe.subsystem = .windows;
+    if (!is_ci) {
+        exe.subsystem = .windows;
+    }
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
