@@ -1,18 +1,9 @@
-const VERSION = "2.4.0-dev.1";
+const VERSION = "2.4.0-dev.2";
 const std = @import("std");
-const Clock = std.Io.Clock;
-const Duration = std.Io.Duration;
-const File = std.Io.File;
 const Writer = std.Io.Writer;
-const Allocator = std.mem.Allocator;
-const ArrayList = std.ArrayList;
-const timestamp = std.Io.Timestamp.now;
-const cwd = std.Io.Dir.cwd;
 const eql = std.mem.eql;
-const print = std.debug.print;
 const f = std.fmt.bufPrint;
 const cTime = @cImport(@cInclude("time.h"));
-const parseInt = std.fmt.parseInt;
 
 const win = std.os.windows;
 extern "user32" fn GetForegroundWindow() callconv(.winapi) ?win.HWND;
@@ -32,14 +23,14 @@ pub fn main(init: std.process.Init) !void {
 
     const stdout_buffer = try allocator.alloc(u8, 1024);
     defer allocator.free(stdout_buffer);
-    var stdout_writer = File.stdout().writer(io, stdout_buffer);
+    var stdout_writer = std.Io.File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
     var args_iter = try minimal.args.iterateAllocator(allocator);
     defer args_iter.deinit();
     _ = args_iter.next();
 
-    var arg_output_format1 = try ArrayList(u8).initCapacity(allocator, 1024);
+    var arg_output_format1 = try std.ArrayList(u8).initCapacity(allocator, 1024);
     defer arg_output_format1.deinit(allocator);
 
     var arg_verbose: u8 = 0;
@@ -63,7 +54,7 @@ pub fn main(init: std.process.Init) !void {
             arg_use_date = true;
         } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
             if (args_iter.next()) |next_arg| {
-                arg_sleep = try parseInt(i64, next_arg, 10);
+                arg_sleep = try std.fmt.parseInt(i64, next_arg, 10);
                 if (arg_sleep < 10) {
                     arg_sleep = 10;
                 }
@@ -88,7 +79,7 @@ pub fn main(init: std.process.Init) !void {
     @memcpy(arg_output_format2[0..len], arg_output_format1.items[0..len]);
     arg_output_format2[len] = 0;
 
-    const now = Clock.real.now(io).toSeconds();
+    const now = std.Io.Clock.real.now(io).toSeconds();
     const localtime = cTime.localtime(&now);
     const output_path_l = cTime.strftime(arg_output_path_b.ptr, 1024, arg_output_format2, localtime);
     const arg_output_path_s = arg_output_path_b[0..output_path_l];
@@ -101,7 +92,7 @@ pub fn main(init: std.process.Init) !void {
         try stdout.flush();
     }
 
-    var file = try cwd().createFile(io, arg_output_path_s, .{
+    var file = try std.Io.Dir.cwd().createFile(io, arg_output_path_s, .{
         .truncate = false,
         .read = true,
     });

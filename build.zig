@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
         .major = 2,
         .minor = 4,
         .patch = 0,
-        .pre = "dev.1",
+        .pre = "dev.2",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
