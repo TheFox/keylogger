@@ -1,4 +1,4 @@
-const VERSION = "2.4.0-dev.2";
+const VERSION = "2.4.0-dev.3";
 const std = @import("std");
 const Writer = std.Io.Writer;
 const eql = std.mem.eql;
@@ -163,7 +163,7 @@ pub fn main(init: std.process.Init) !void {
         while (key_i < 255) : (key_i += 1) {
             const key_state: win.SHORT = GetAsyncKeyState(key_i);
             if (key_state & 1 != 0) {
-                const key_name_s = getKeyName(key_name_b, key_i);
+                const key_name_s = try getKeyName(key_name_b, key_i);
                 if (arg_verbose >= 1) {
                     try stdout.print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
                     try stdout.flush();
@@ -199,8 +199,8 @@ fn printHelp(stdout: *Writer) !void {
     try stdout.flush();
 }
 
-fn getKeyName(kn: []u8, ki: u8) []u8 {
-    const x = (switch (ki) {
+fn getKeyName(kn: []u8, ki: u8) ![]u8 {
+    return try switch (ki) {
         1 => f(kn, "[LMOUSE]", .{}),
         2 => f(kn, "[RMOUSE]", .{}),
         4 => f(kn, "[MMOUSE]", .{}),
@@ -251,6 +251,5 @@ fn getKeyName(kn: []u8, ki: u8) []u8 {
         222 => f(kn, "[AE]", .{}), // ä
         226 => f(kn, "<", .{}),
         else => f(kn, "[KEY \\{d}]", .{ki}),
-    }) catch @panic("bufPrint failed");
-    return x;
+    };
 }

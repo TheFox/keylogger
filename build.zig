@@ -1,6 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
-const allocPrint = std.fmt.allocPrint;
+const aprint = std.fmt.allocPrint;
 const eql = std.mem.eql;
 
 pub fn build(b: *std.Build) !void {
@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
         .major = 2,
         .minor = 4,
         .patch = 0,
-        .pre = "dev.2",
+        .pre = "dev.3",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
@@ -16,14 +16,12 @@ pub fn build(b: *std.Build) !void {
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
 
-    var target_name: []u8 = undefined;
-    if (is_ci) {
-        target_name = try allocPrint(b.allocator, "keylogger", .{});
-    } else if (eql(u8, target.result.cpu.model.name, "x86_64")) {
-        target_name = try allocPrint(b.allocator, "keylogger-{s}", .{@tagName(target.result.cpu.arch)});
-    } else {
-        target_name = try allocPrint(b.allocator, "keylogger-{s}-{s}", .{ @tagName(target.result.cpu.arch), target.result.cpu.model.name });
-    }
+    const target_name = try if (is_ci)
+        aprint(b.allocator, "keylogger", .{})
+    else if (eql(u8, target.result.cpu.model.name, "x86_64"))
+        aprint(b.allocator, "keylogger-{s}", .{@tagName(target.result.cpu.arch)})
+    else
+        aprint(b.allocator, "keylogger-{s}-{s}", .{ @tagName(target.result.cpu.arch), target.result.cpu.model.name });
 
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
     print("target cpu: {s}\n", .{target.result.cpu.model.name});
