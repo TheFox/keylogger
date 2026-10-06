@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
         .major = 2,
         .minor = 4,
         .patch = 0,
-        .pre = "dev.4",
+        .pre = "dev.5",
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
@@ -30,12 +30,24 @@ pub fn build(b: *std.Build) !void {
     print("optimize: {s}\n", .{@tagName(optimize)});
     print("CI: {any}\n", .{is_ci});
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/c.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .strip = optimize != .debug,
         .link_libc = true,
+        .imports = &.{
+            .{
+                .name = "c",
+                .module = translate_c.createModule(),
+            },
+        },
     });
 
     const exe = b.addExecutable(.{

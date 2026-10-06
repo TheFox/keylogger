@@ -1,4 +1,4 @@
-const VERSION = "2.4.0-dev.4";
+const VERSION = "2.4.0-dev.5";
 const c = @import("c");
 const std = @import("std");
 const Writer = std.Io.Writer;
