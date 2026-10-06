@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) !void {
     };
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{
-        .preferred_optimize_mode = .ReleaseSmall,
+        .preferred_optimize_mode = .small,
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
 
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = optimize != .Debug,
+        .strip = optimize != .debug,
         .link_libc = true,
     });
 
