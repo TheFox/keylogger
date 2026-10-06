@@ -1,9 +1,9 @@
-const VERSION = "2.4.0-dev.3";
+const VERSION = "2.4.0-dev.4";
+const c = @import("c");
 const std = @import("std");
 const Writer = std.Io.Writer;
 const eql = std.mem.eql;
 const f = std.fmt.bufPrint;
-const cTime = @cImport(@cInclude("time.h"));
 
 const win = std.os.windows;
 extern "user32" fn GetForegroundWindow() callconv(.winapi) ?win.HWND;
@@ -80,8 +80,8 @@ pub fn main(init: std.process.Init) !void {
     arg_output_format2[len] = 0;
 
     const now = std.Io.Clock.real.now(io).toSeconds();
-    const localtime = cTime.localtime(&now);
-    const output_path_l = cTime.strftime(arg_output_path_b.ptr, 1024, arg_output_format2, localtime);
+    const now_lt = c.localtime(&now);
+    const output_path_l = c.strftime(arg_output_path_b.ptr, 1024, arg_output_format2, now_lt);
     const arg_output_path_s = arg_output_path_b[0..output_path_l];
 
     if (arg_verbose >= 1) {

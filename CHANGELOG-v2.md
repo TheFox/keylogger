@@ -3,6 +3,7 @@
 ## v2.4.0 [unreleased]
 
 - Hide console window by default.
+- Use Zig 0.17.0.
 
 ## v2.3.0
 
