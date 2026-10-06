@@ -22,6 +22,12 @@ Download the latest pre-build exe files from the [Releases](https://github.com/T
 	- MSVC v143 x64/x86 build tools
 	- Windows 11 SDK (10.0.22621.0)
 
+### Scoop
+
+```PS
+scoop update zig
+```
+
 ### Build
 
 ```sh
