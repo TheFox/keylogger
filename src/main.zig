@@ -26,6 +26,11 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer = std.Io.File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
+    const stderr_buffer = try gpa.alloc(u8, 1024);
+    defer gpa.free(stderr_buffer);
+    var stderr_writer = std.Io.File.stderr().writer(io, stderr_buffer);
+    const stderr = &stderr_writer.interface;
+
     var args_iter = try minimal.args.iterateAllocator(gpa);
     defer args_iter.deinit();
     _ = args_iter.next();
@@ -59,6 +64,10 @@ pub fn main(init: std.process.Init) !void {
                     arg_sleep = 10;
                 }
             }
+        } else {
+            try stderr.print("ERROR: unknown argument: {s}\n", .{arg});
+            try stderr.flush();
+            return;
         }
     }
 
