@@ -1,4 +1,4 @@
-const VERSION = "2.4.0-dev.5";
+const build_options = @import("build_options");
 const c = @import("c");
 const std = @import("std");
 const Writer = std.Io.Writer;
@@ -188,7 +188,7 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn printHeader(stdout: *Writer) !void {
-    try stdout.print("Keylogger " ++ VERSION ++ "\n", .{});
+    try stdout.print("Keylogger " ++ build_options.VERSION ++ "\n", .{});
     try stdout.print("Copyright (C) 2009 Christian Mayer <https://fox21.at>\n\n", .{});
     try stdout.flush();
 }
