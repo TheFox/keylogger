@@ -24,9 +24,11 @@ jobs:
         run: zig version
 
       - name: Build
-        run: zig build install --release -Dci=true -Dmethod=loop
-        run: zig build install --release -Dci=true -Dmethod=hook
+        run: |
+          zig build install --release -Dci=true -Dmethod=loop
+          zig build install --release -Dci=true -Dmethod=hook
 
       - name: Check help
-        run: ./zig-out/bin/keylogger-loop.exe --help
-        run: ./zig-out/bin/keylogger-hook.exe --help
+        run: |
+          ./zig-out/bin/keylogger-loop.exe --help
+          ./zig-out/bin/keylogger-hook.exe --help
