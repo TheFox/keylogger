@@ -4,6 +4,7 @@
 
 - Hide console window by default.
 - Use Zig 0.17.0.
+- Windows Hook by default.
 
 ## v2.3.0
 

