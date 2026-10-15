@@ -347,7 +347,7 @@ fn printHeader(stdout: *Writer) !void {
 }
 
 fn printHelp(stdout: *Writer) !void {
-    const help =
+    const base_help =
         \\Usage: keylogger.exe [<options>]
         \\
         \\Options:
@@ -355,8 +355,15 @@ fn printHelp(stdout: *Writer) !void {
         \\-v, --verbose             Verbose output.
         \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
         \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
-        \\-s, --sleep <msec>        Time to sleep in milliseconds (default method only). Default: 10
     ;
+    const sleep_help =
+        \\
+        \\-s, --sleep <msec>        Time to sleep in milliseconds (loop method only). Default: 10
+    ;
+    const help = base_help ++ if (build_options.METHOD == .loop)
+        sleep_help
+    else
+        "";
     try stdout.print(help ++ "\n", .{});
     try stdout.flush();
 }
