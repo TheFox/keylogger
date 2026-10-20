@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .small,
     });
+    const use_ws = b.option(bool, "subsys", "Enable Windows Subsystem") orelse true;
     const is_ci = b.option(bool, "ci", "Enable CI mode") orelse false;
     const method_s = b.option([]const u8, "method", "Method ('loop': GetAsyncKeyState loop; 'hook': SetWindowsHookEx)") orelse "hook";
 
@@ -45,6 +46,7 @@ pub fn build(b: *std.Build) !void {
     print("target os: {s}\n", .{@tagName(target.result.os.tag)});
     print("target name: {s}\n", .{target_name});
     print("optimize: {s}\n", .{@tagName(optimize)});
+    print("use_ws: {any}\n", .{use_ws});
     print("is_ci: {any}\n", .{is_ci});
     print("method: {s}\n", .{method_s});
 
@@ -78,7 +80,7 @@ pub fn build(b: *std.Build) !void {
         .version = version,
         .root_module = exe_mod,
     });
-    if (!is_ci) {
+    if (use_ws) {
         exe.subsystem = .windows;
     }
     b.installArtifact(exe);

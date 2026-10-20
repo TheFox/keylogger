@@ -45,7 +45,21 @@ zig build install --release -Dtarget=x86-windows -Dcpu=i686
 
 The old method uses a loop with a (per default) 10 ms sleep. The new method now uses a Windows hook.
 
-Selected at build time via -Dmethod=loop|hook, wired through build.zig as build_options.METHOD. "loop" polls GetAsyncKeyState; "hook" uses a low-level keyboard hook (event-driven, no idle CPU wakeups).
+Selected at build time via `-Dmethod=loop|hook`, wired through build.zig as `build_options.METHOD`. `loop` polls GetAsyncKeyState; `hook` uses a low-level keyboard hook (event-driven, no idle CPU wakeups).
+
+Build with `loop`:
+
+```PS
+zig build install --release -Dmethod=loop
+```
+
+## Show help in terminal
+
+Disable windows subsystem using `-Dsubsys=false` to run it in a terminal window.
+
+```PS
+zig build run -freference-trace=20 -Dsubsys=false -Dmethod=loop -- --help
+```
 
 ## Tested under
 
