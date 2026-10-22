@@ -102,12 +102,12 @@ const Args = struct {
     output_format2: []u8,
     output_path_b: []u8,
     output_path_s: []u8 = undefined,
-    output_path_l: []u8 = undefined,
+    output_path_l: usize = undefined,
 };
 const ArgError = error{ InvalidArgs, HelpRequested } || Allocator.Error || std.fmt.ParseIntError;
 
 fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
-    var args_iter = argv.iterate();
+    var args_iter = try argv.iterateAllocator(gpa);
     defer args_iter.deinit();
     _ = args_iter.next();
 
@@ -157,6 +157,7 @@ fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
 
     const now = Io.Clock.real.now(io).toSeconds();
     const now_lt = c.localtime(&now);
+
     args.output_path_l = c.strftime(args.output_path_b.ptr, 1024, args.output_format2.ptr, now_lt);
     args.output_path_s = args.output_path_b[0..args.output_path_l];
 
@@ -304,7 +305,7 @@ pub fn main(init: std.process.Init) !u8 {
             const hook = SetWindowsHookExA(WH_KEYBOARD_LL, &lowLevelKeyboardProc, null, 0) orelse {
                 try stderr.print("ERROR: SetWindowsHookExA failed\n", .{});
                 try stderr.flush();
-                return;
+                return 1;
             };
             defer _ = UnhookWindowsHookEx(hook);
 
@@ -328,6 +329,8 @@ pub fn main(init: std.process.Init) !u8 {
 
     try io_writer.flush();
     try file_writer.flush();
+
+    return 0;
 }
 
 // Low-level keyboard hook callback. Runs on the main thread during GetMessage.
