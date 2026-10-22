@@ -104,7 +104,16 @@ const Args = struct {
     output_path_s: []u8 = undefined,
     output_path_l: usize = undefined,
 };
-const ArgError = error{ InvalidArgs, HelpRequested } || Allocator.Error || std.fmt.ParseIntError;
+const ArgError = error{
+    InvalidArgs,
+    MissingValue,
+    HelpRequested,
+} || Allocator.Error || std.fmt.ParseIntError;
+
+const ArgsStatus = struct {
+    arg: []const u8 = "",
+};
+var args_status: ArgsStatus = .{};
 
 fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
     var args_iter = try argv.iterateAllocator(gpa);
@@ -127,15 +136,21 @@ fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
             if (args_iter.next()) |next_arg| {
                 args.output_format1.clearRetainingCapacity();
                 try args.output_format1.appendSlice(gpa, next_arg);
+            } else {
+                args_status.arg = arg;
+                return error.MissingValue;
             }
         } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
             args.use_date = true;
-        } else if (eql(u8, arg, "-s") or eql(u8, arg, "--sleep")) {
+        } else if (build_options.METHOD == .loop and (eql(u8, arg, "-s") or eql(u8, arg, "--sleep"))) {
             if (args_iter.next()) |next_arg| {
                 args.sleep = try parseInt(i64, next_arg, 10);
                 if (args.sleep < 10) {
                     args.sleep = 10;
                 }
+            } else {
+                args_status.arg = arg;
+                return error.MissingValue;
             }
         } else {
             print("ERROR: unrecognized argument: {s}\n", .{arg});
@@ -186,6 +201,10 @@ pub fn main(init: std.process.Init) !u8 {
             return 0;
         },
         error.InvalidArgs => {
+            return 1;
+        },
+        error.MissingValue => {
+            print("ERROR: argument {s} is missing a value\n", .{args_status.arg});
             return 1;
         },
         else => return err,
