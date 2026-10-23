@@ -6,7 +6,6 @@ const Io = std.Io;
 const Writer = std.Io.Writer;
 const eql = std.mem.eql;
 const f = std.fmt.bufPrint;
-const print = std.debug.print;
 const parseInt = std.fmt.parseInt;
 
 const win = std.os.windows;
@@ -126,6 +125,8 @@ fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
         .output_path_b = try gpa.alloc(u8, 1024),
     };
     while (args_iter.next()) |arg| {
+        args_status.arg = arg;
+
         if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
             return error.HelpRequested;
         } else if (eql(u8, arg, "-v") or eql(u8, arg, "--verbose")) {
@@ -136,10 +137,7 @@ fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
             if (args_iter.next()) |next_arg| {
                 args.output_format1.clearRetainingCapacity();
                 try args.output_format1.appendSlice(gpa, next_arg);
-            } else {
-                args_status.arg = arg;
-                return error.MissingValue;
-            }
+            } else return error.MissingValue;
         } else if (eql(u8, arg, "-d") or eql(u8, arg, "--date")) {
             args.use_date = true;
         } else if (build_options.METHOD == .loop and (eql(u8, arg, "-s") or eql(u8, arg, "--sleep"))) {
@@ -148,14 +146,8 @@ fn parseArgs(gpa: Allocator, io: Io, argv: std.process.Args) ArgError!Args {
                 if (args.sleep < 10) {
                     args.sleep = 10;
                 }
-            } else {
-                args_status.arg = arg;
-                return error.MissingValue;
-            }
-        } else {
-            print("ERROR: unrecognized argument: {s}\n", .{arg});
-            return error.InvalidArgs;
-        }
+            } else return error.MissingValue;
+        } else return error.InvalidArgs;
     }
 
     if (args.output_format1.items.len == 0) {
@@ -201,10 +193,13 @@ pub fn main(init: std.process.Init) !u8 {
             return 0;
         },
         error.InvalidArgs => {
+            try stderr.print("ERROR: unrecognized argument: {s}\n", .{args_status.arg});
+            try stderr.flush();
             return 1;
         },
         error.MissingValue => {
-            print("ERROR: argument {s} is missing a value\n", .{args_status.arg});
+            try stderr.print("ERROR: argument {s} is missing a value\n", .{args_status.arg});
+            try stderr.flush();
             return 1;
         },
         else => return err,
@@ -258,7 +253,7 @@ pub fn main(init: std.process.Init) !u8 {
         .loop => {
             var prev_type: PrevType = .init;
             while (true) {
-                try init.io.sleep(.fromMilliseconds(args.sleep), .real);
+                try io.sleep(.fromMilliseconds(args.sleep), .real);
 
                 const hwnd: win.HWND = GetForegroundWindow() orelse continue;
                 const ctitle_len = GetWindowTextA(hwnd, ctitle_b.ptr, @intCast(title_len_i));

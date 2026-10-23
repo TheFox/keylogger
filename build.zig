@@ -1,7 +1,7 @@
 const config = @import("build.zig.zon");
 const std = @import("std");
 const types = @import("src/types.zig");
-const print = std.debug.print;
+const dprint = std.debug.print;
 const aprint = std.fmt.allocPrint;
 const eql = std.mem.eql;
 
@@ -40,15 +40,15 @@ pub fn build(b: *std.Build) !void {
             method_s,
         });
 
-    print("version: {s}\n", .{config.version});
-    print("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
-    print("target cpu: {s}\n", .{target.result.cpu.model.name});
-    print("target os: {s}\n", .{@tagName(target.result.os.tag)});
-    print("target name: {s}\n", .{target_name});
-    print("optimize: {s}\n", .{@tagName(optimize)});
-    print("use_ws: {any}\n", .{use_ws});
-    print("is_ci: {any}\n", .{is_ci});
-    print("method: {s}\n", .{method_s});
+    dprint("version: {s}\n", .{config.version});
+    dprint("target arch: {s}\n", .{@tagName(target.result.cpu.arch)});
+    dprint("target cpu: {s}\n", .{target.result.cpu.model.name});
+    dprint("target os: {s}\n", .{@tagName(target.result.os.tag)});
+    dprint("target name: {s}\n", .{target_name});
+    dprint("optimize: {s}\n", .{@tagName(optimize)});
+    dprint("use_ws: {any}\n", .{use_ws});
+    dprint("is_ci: {any}\n", .{is_ci});
+    dprint("method: {s}\n", .{method_s});
 
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/c.h"),
