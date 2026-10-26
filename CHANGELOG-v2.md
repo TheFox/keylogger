@@ -1,6 +1,6 @@
 # Release Notes for Keylogger v2.x
 
-## v2.4.0 [unreleased]
+## v2.4.0
 
 - Hide console window by default.
 - Use Zig 0.17.0.
